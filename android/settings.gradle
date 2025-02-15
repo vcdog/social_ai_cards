@@ -8,6 +8,8 @@ pluginManagement {
     }
     settings.ext.flutterSdkPath = flutterSdkPath()
 
+    includeBuild("${settings.ext.flutterSdkPath}/packages/flutter_tools/gradle")
+
     repositories {
         google()
         mavenCentral()
@@ -23,5 +25,3 @@ pluginManagement {
 }
 
 include ":app"
-
-apply from: "${settings.ext.flutterSdkPath}/packages/flutter_tools/gradle/app_plugin_loader.gradle"
