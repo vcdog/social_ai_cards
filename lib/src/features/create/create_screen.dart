@@ -9,7 +9,7 @@ class CreateScreen extends StatefulWidget {
   State<CreateScreen> createState() => _CreateScreenState();
 }
 
-class _CreateScreenState extends State<CreateScreen> {
+class _CreateScreenState extends State<CreateScreen> with SingleTickerProviderStateMixin {
   // 当前选中的编辑模式
   String _currentMode = 'template'; // template, edit, preview
   final UnsplashService _unsplashService = UnsplashService();
@@ -32,14 +32,88 @@ class _CreateScreenState extends State<CreateScreen> {
   double _textSize = 16.0;
   Color _textColor = Colors.black87;
 
+  // 添加工具栏展开状态控制
+  bool _isToolbarExpanded = false;
+  late AnimationController _toolbarAnimController;
+  late Animation<double> _toolbarSlideAnimation;
+  late Animation<double> _arrowRotationAnimation;
+
+  // 修改渐变色列表，完善第二页的深色系颜色
+  final List<List<Color>> _gradientColors = [
+    // 第一页 - 浅色系
+    [Colors.blue.shade200, Colors.lightBlue.shade200],
+    [Colors.blue.shade300, Colors.lightBlue.shade300],
+    [Colors.green.shade200, Colors.lightGreen.shade200],
+    [Colors.pink.shade100, Colors.blue.shade100],
+    [Colors.purple.shade200, Colors.blue.shade200],
+    [Colors.white, Colors.grey.shade100],
+    [Colors.purple.shade100, Colors.pink.shade100],
+    [Colors.pink.shade200, Colors.red.shade100],
+    [Colors.pink.shade300, Colors.purple.shade200],
+    [Colors.orange.shade100, Colors.yellow.shade100],
+    [Colors.yellow.shade200, Colors.yellow.shade100],
+    [Colors.purple.shade100, Colors.blue.shade100],
+    [Colors.yellow.shade300, Colors.yellow.shade200],
+    [Colors.green.shade200, Colors.lightGreen.shade100],
+    [Colors.blue.shade100, Colors.lightBlue.shade100],
+    [Colors.pink.shade100, Colors.purple.shade100],
+    // 第二页 - 深色系
+    [Colors.blue.shade900, Colors.indigo.shade800],
+    [Colors.purple.shade900, Colors.deepPurple.shade800],
+    [Colors.red.shade900, Colors.redAccent.shade700],
+    [Colors.green.shade900, Colors.teal.shade800],
+    [Colors.brown.shade900, Colors.brown.shade800],
+    [Colors.grey.shade900, Colors.blueGrey.shade800],
+    [Colors.indigo.shade900, Colors.blue.shade900],
+    [Colors.deepPurple.shade900, Colors.purple.shade900],
+    [Colors.pink.shade900, Colors.red.shade900],
+    [Colors.teal.shade900, Colors.green.shade900],
+    [Colors.blueGrey.shade900, Colors.grey.shade900],
+    [Colors.deepOrange.shade900, Colors.orange.shade900],
+    [Colors.cyan.shade900, Colors.blue.shade900],
+    [Colors.amber.shade900, Colors.orange.shade900],
+    [Colors.lime.shade900, Colors.green.shade900],
+    [Colors.black, Colors.grey.shade900],
+  ];
+
+  // 添加当前选中的渐变色索引
+  int _selectedGradientIndex = -1;
+  // 添加当前颜色选择器页码
+  int _currentColorPage = 0;
+
   @override
   void initState() {
     super.initState();
     _loadTemplateImages();
+    
+    // 初始化动画控制器
+    _toolbarAnimController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+
+    // 工具栏滑动动画
+    _toolbarSlideAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.0,
+    ).animate(CurvedAnimation(
+      parent: _toolbarAnimController,
+      curve: Curves.easeInOut,
+    ));
+
+    // 箭头旋转动画
+    _arrowRotationAnimation = Tween<double>(
+      begin: 0,
+      end: 3.14159, // 180度（π弧度）
+    ).animate(CurvedAnimation(
+      parent: _toolbarAnimController,
+      curve: Curves.easeInOut,
+    ));
   }
 
   @override
   void dispose() {
+    _toolbarAnimController.dispose();
     _textController.dispose();
     super.dispose();
   }
@@ -288,111 +362,114 @@ class _CreateScreenState extends State<CreateScreen> {
   }
 
   Widget _buildEditor() {
-    return Stack(
-      children: [
-        Center(
-          child: AspectRatio(
-            aspectRatio: 9 / 16,
-            child: Container(
-              margin: const EdgeInsets.all(16.0),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.2),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  if (_selectedBackgroundImage != null)
-                    ColorFiltered(
-                      colorFilter: ColorFilter.mode(
-                        Colors.white.withOpacity(0.7),
-                        BlendMode.lighten,
+    return SingleChildScrollView(
+      child: Stack(
+        children: [
+          Center(
+            child: AspectRatio(
+              aspectRatio: 9 / 16,
+              child: Container(
+                margin: const EdgeInsets.all(16.0),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.2),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    if (_selectedBackgroundImage != null)
+                      ColorFiltered(
+                        colorFilter: ColorFilter.mode(
+                          Colors.white.withOpacity(0.7),
+                          BlendMode.lighten,
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.network(
+                            _selectedBackgroundImage!,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
                       ),
-                      child: ClipRRect(
+                    Container(
+                      decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(12),
-                        child: Image.network(
-                          _selectedBackgroundImage!,
-                          fit: BoxFit.cover,
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.black.withOpacity(0.1),
+                            Colors.black.withOpacity(0.2),
+                          ],
                         ),
                       ),
                     ),
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.black.withOpacity(0.1),
-                          Colors.black.withOpacity(0.2),
-                        ],
+                    Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _isEditing = true;
+                            _textController.text = _editingText == '在此处添加文本' ? '' : _editingText;
+                          });
+                        },
+                        child: _isEditing
+                            ? TextField(
+                                controller: _textController,
+                                autofocus: true,
+                                maxLines: null,
+                                textAlign: TextAlign.center,
+                                enableInteractiveSelection: true,
+                                style: TextStyle(
+                                  fontSize: _textSize,
+                                  color: _textColor,
+                                  height: 1.5,
+                                ),
+                                decoration: const InputDecoration(
+                                  border: InputBorder.none,
+                                  hintText: '输入文本',
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.zero,
+                                ),
+                                onSubmitted: (value) {
+                                  setState(() {
+                                    _editingText = value.isEmpty ? '在此处添加文本' : value;
+                                    _isEditing = false;
+                                  });
+                                },
+                                onChanged: (value) {
+                                  setState(() {
+                                    _editingText = value;
+                                  });
+                                },
+                              )
+                            : Text(
+                                _editingText,
+                                style: TextStyle(
+                                  fontSize: _textSize,
+                                  color: _textColor,
+                                  height: 1.5,
+                                ),
+                                textAlign: TextAlign.center,
+                                softWrap: true,
+                                overflow: TextOverflow.visible,
+                              ),
                       ),
                     ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(24.0),
-                    child: GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _isEditing = true;
-                          _textController.text = _editingText == '在此处添加文本' ? '' : _editingText;
-                        });
-                      },
-                      child: _isEditing
-                          ? TextField(
-                              controller: _textController,
-                              autofocus: true,
-                              maxLines: null,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: _textSize,
-                                color: _textColor,
-                                height: 1.5,
-                              ),
-                              decoration: const InputDecoration(
-                                border: InputBorder.none,
-                                hintText: '输入文本',
-                                isDense: true,
-                                contentPadding: EdgeInsets.zero,
-                              ),
-                              onSubmitted: (value) {
-                                setState(() {
-                                  _editingText = value.isEmpty ? '在此处添加文本' : value;
-                                  _isEditing = false;
-                                });
-                              },
-                              onChanged: (value) {
-                                setState(() {
-                                  _editingText = value;
-                                });
-                              },
-                            )
-                          : Text(
-                              _editingText,
-                              style: TextStyle(
-                                fontSize: _textSize,
-                                color: _textColor,
-                                height: 1.5,
-                              ),
-                              textAlign: TextAlign.center,
-                              softWrap: true,
-                              overflow: TextOverflow.visible,
-                            ),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -469,108 +546,105 @@ class _CreateScreenState extends State<CreateScreen> {
   }
 
   Widget _buildToolbar() {
-    return Container(
-      padding: const EdgeInsets.all(16.0),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
-            blurRadius: 4,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _buildToolbarItem(
-            Icons.text_fields,
-            '文本',
-            onTap: () {
-              setState(() {
-                _isEditing = true;
-                _textController.text = _editingText == '在此处添加文本' ? '' : _editingText;
-              });
-            },
-          ),
-          _buildToolbarItem(Icons.image_outlined, '图片'),
-          _buildToolbarItem(Icons.format_paint_outlined, '背景'),
-          _buildToolbarItem(
-            Icons.palette_outlined,
-            '样式',
-            onTap: () {
-              _showTextStyleDialog();
-            },
-          ),
-          _buildToolbarItem(Icons.qr_code_outlined, '二维码'),
-        ],
-      ),
-    );
-  }
-
-  void _showTextStyleDialog() {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) {
+    return AnimatedBuilder(
+      animation: _toolbarAnimController,
+      builder: (context, child) {
         return Container(
-          padding: const EdgeInsets.all(16.0),
+          decoration: BoxDecoration(
+            color: Colors.grey[100],
+            border: Border(
+              top: BorderSide(
+                color: Colors.white,
+                width: 1,
+              ),
+            ),
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('文本样式', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 16),
-              // 文字大小调节
-              Row(
-                children: [
-                  const Text('文字大小'),
-                  Expanded(
-                    child: Slider(
-                      value: _textSize,
-                      min: 12,
-                      max: 32,
-                      onChanged: (value) {
-                        setState(() {
-                          _textSize = value;
-                        });
-                      },
-                    ),
-                  ),
-                ],
-              ),
-              // 文字颜色选择
-              Wrap(
-                spacing: 8,
-                children: [
-                  Colors.black87,
-                  Colors.white,
-                  Colors.red,
-                  Colors.blue,
-                  Colors.green,
-                  Colors.orange,
-                ].map((color) {
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _textColor = color;
-                      });
-                      Navigator.pop(context);
-                    },
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: color,
-                        border: Border.all(
-                          color: Colors.grey,
-                          width: _textColor == color ? 2 : 1,
+              // 颜色选择器（当点击颜色按钮时显示）
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                height: _showColorPicker ? null : 0,
+                child: _showColorPicker
+                    ? Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(12),
+                            topRight: Radius.circular(12),
+                          ),
                         ),
-                        borderRadius: BorderRadius.circular(20),
+                        child: _buildColorPicker(),
+                      )
+                    : null,
+              ),
+              // 工具栏
+              InkWell(
+                onTap: _toggleToolbar,
+                child: Container(
+                  height: 40,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: Row(
+                    children: [
+                      Transform.rotate(
+                        angle: _arrowRotationAnimation.value,
+                        child: Icon(
+                          _isToolbarExpanded 
+                              ? Icons.keyboard_arrow_down 
+                              : Icons.keyboard_arrow_up,
+                          size: 24,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      if (!_isToolbarExpanded)
+                        const Text(
+                          '样式编辑',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      if (_isToolbarExpanded) ...[
+                        Expanded(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: [
+                              _buildToolbarItem('模板'),
+                              _buildToolbarItem('文字'),
+                              _buildToolbarItem('颜色'),
+                              _buildToolbarItem('显隐'),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              // 工具栏内容
+              if (!_isToolbarExpanded)
+                ClipRect(
+                  child: Align(
+                    heightFactor: 1.0 - _toolbarSlideAnimation.value,
+                    child: Container(
+                      height: 48,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _buildToolbarItem('模板'),
+                          _buildToolbarItem('文字'),
+                          _buildToolbarItem('颜色'),
+                          _buildToolbarItem('显隐'),
+                        ],
                       ),
                     ),
-                  );
-                }).toList(),
-              ),
+                  ),
+                ),
             ],
           ),
         );
@@ -578,24 +652,140 @@ class _CreateScreenState extends State<CreateScreen> {
     );
   }
 
-  Widget _buildToolbarItem(IconData icon, String label, {VoidCallback? onTap}) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: const TextStyle(fontSize: 12),
+  // 添加颜色选择器显示状态
+  bool _showColorPicker = false;
+
+  Widget _buildToolbarItem(String label) {
+    return GestureDetector(
+      onTapDown: (TapDownDetails details) {
+        switch (label) {
+          case '颜色':
+            setState(() {
+              _showColorPicker = !_showColorPicker;
+            });
+            break;
+          // TODO: 处理其他按钮点击事件
+        }
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          color: Colors.transparent,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 14,
+              color: Colors.black87,
             ),
-          ],
+          ),
         ),
       ),
+    );
+  }
+
+  // 工具栏展开/收起切换
+  void _toggleToolbar() {
+    setState(() {
+      _isToolbarExpanded = !_isToolbarExpanded;
+      if (_isToolbarExpanded) {
+        _toolbarAnimController.reverse();
+      } else {
+        _toolbarAnimController.forward();
+      }
+    });
+  }
+
+  Widget _buildGradientColorButton(int index) {
+    if (index >= _gradientColors.length) return const SizedBox(width: 32);
+    
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedGradientIndex = index;
+        });
+        // TODO: 应用选中的渐变色
+      },
+      child: Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: _gradientColors[index],
+          ),
+          border: _selectedGradientIndex == index
+              ? Border.all(color: Colors.yellow, width: 2)
+              : null,
+        ),
+      ),
+    );
+  }
+
+  // 添加页面切换方法
+  void _toggleColorPage() {
+    setState(() {
+      _currentColorPage = _currentColorPage == 0 ? 1 : 0;
+    });
+  }
+
+  // 修改颜色选择器部分的代码
+  Widget _buildColorPicker() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // 渐变色按钮网格
+        Wrap(
+          alignment: WrapAlignment.spaceEvenly,
+          spacing: 8,
+          runSpacing: 8,
+          children: List.generate(8, (index) {
+            final colorIndex = _currentColorPage * 16 + index;
+            return _buildGradientColorButton(colorIndex);
+          }),
+        ),
+        const SizedBox(height: 16),
+        Wrap(
+          alignment: WrapAlignment.spaceEvenly,
+          spacing: 8,
+          runSpacing: 8,
+          children: List.generate(8, (index) {
+            final colorIndex = _currentColorPage * 16 + index + 8;
+            return _buildGradientColorButton(colorIndex);
+          }),
+        ),
+        const SizedBox(height: 16),
+        // 页面指示器和切换按钮
+        GestureDetector(
+          onTap: _toggleColorPage,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 16,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: _currentColorPage == 0 ? Colors.yellow : Colors.grey.shade400,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 4),
+              Container(
+                width: 16,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: _currentColorPage == 1 ? Colors.yellow : Colors.grey.shade400,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
