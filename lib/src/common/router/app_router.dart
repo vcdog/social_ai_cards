@@ -38,82 +38,45 @@ CustomTransitionPage<T> _buildPageWithDefaultTransition<T>({
 
 final goRouter = GoRouter(
   navigatorKey: _rootNavigatorKey,
-  initialLocation: '/welcome',
+  initialLocation: '/',
   routes: [
+    // 欢迎页面路由
     GoRoute(
       path: '/welcome',
-      pageBuilder: (context, state) => _buildPageWithDefaultTransition(
-        context: context,
-        state: state,
-        child: const WelcomeScreen(),
-      ),
+      builder: (context, state) => const WelcomeScreen(),
     ),
-    StatefulShellRoute.indexedStack(
-      builder: (context, state, navigationShell) {
-        return ShellScreen(navigationShell: navigationShell);
+    
+    // 使用 ShellRoute 来管理带有底部导航栏的页面
+    ShellRoute(
+      navigatorKey: _shellNavigatorKey,
+      builder: (context, state, child) {
+        return ShellScreen(child: child);
       },
-      branches: [
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: '/',
-              pageBuilder: (context, state) => _buildPageWithDefaultTransition(
-                context: context,
-                state: state,
-                child: const HomeScreen(),
-              ),
-            ),
-          ],
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, state) => const HomeScreen(),
         ),
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: '/template',
-              pageBuilder: (context, state) => _buildPageWithDefaultTransition(
-                context: context,
-                state: state,
-                child: const TemplateScreen(),
-              ),
-            ),
-          ],
+        GoRoute(
+          path: '/templates',
+          builder: (context, state) => const TemplateScreen(),
         ),
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: '/create',
-              pageBuilder: (context, state) => _buildPageWithDefaultTransition(
-                context: context,
-                state: state,
-                child: const CreateScreen(),
-              ),
-            ),
-          ],
+        GoRoute(
+          path: '/works',
+          builder: (context, state) => const WorksScreen(),
         ),
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: '/works',
-              pageBuilder: (context, state) => _buildPageWithDefaultTransition(
-                context: context,
-                state: state,
-                child: const WorksScreen(),
-              ),
-            ),
-          ],
-        ),
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: '/profile',
-              pageBuilder: (context, state) => _buildPageWithDefaultTransition(
-                context: context,
-                state: state,
-                child: const ProfileScreen(),
-              ),
-            ),
-          ],
+        GoRoute(
+          path: '/profile',
+          builder: (context, state) => const ProfileScreen(),
         ),
       ],
+    ),
+    
+    // 创建卡片页面作为独立路由，不在 ShellRoute 中
+    GoRoute(
+      parentNavigatorKey: _rootNavigatorKey, // 确保使用根导航器
+      path: '/create',
+      builder: (context, state) => const CreateScreen(),
     ),
   ],
 );

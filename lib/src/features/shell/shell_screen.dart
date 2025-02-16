@@ -2,24 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 class ShellScreen extends StatelessWidget {
-  final StatefulNavigationShell navigationShell;
+  final Widget child;
 
   const ShellScreen({
-    required this.navigationShell,
     Key? key,
+    required this.child,
   }) : super(key: key);
-
-  void _onTap(BuildContext context, int index) {
-    navigationShell.goBranch(index);
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: navigationShell,
+      body: child,
       bottomNavigationBar: NavigationBar(
-        selectedIndex: navigationShell.currentIndex,
-        onDestinationSelected: (index) => _onTap(context, index),
+        selectedIndex: _calculateSelectedIndex(context),
+        onDestinationSelected: (index) => _onItemTapped(index, context),
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.home_outlined),
@@ -49,5 +45,34 @@ class ShellScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  int _calculateSelectedIndex(BuildContext context) {
+    final String location = GoRouterState.of(context).uri.path;
+    if (location == '/') return 0;
+    if (location.startsWith('/templates')) return 1;
+    if (location.startsWith('/works')) return 3;
+    if (location.startsWith('/profile')) return 4;
+    return 0;
+  }
+
+  void _onItemTapped(int index, BuildContext context) {
+    switch (index) {
+      case 0:
+        context.go('/');
+        break;
+      case 1:
+        context.go('/templates');
+        break;
+      case 2:
+        context.push('/create'); // 使用 push 而不是 go
+        break;
+      case 3:
+        context.go('/works');
+        break;
+      case 4:
+        context.go('/profile');
+        break;
+    }
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/unsplash_service.dart';
+import 'package:go_router/go_router.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -112,7 +113,7 @@ class _HomeScreenState extends State<HomeScreen> {
               icon: Icons.add_circle_outline,
               label: '新建卡片',
               onTap: () {
-                // TODO: 跳转到创建页面
+                context.push('/create');
               },
             ),
             _buildQuickActionItem(
