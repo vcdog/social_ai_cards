@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/unsplash_service.dart';
 import '../../models/template_model.dart';
+import '../../common/constants/assets.dart';
 
 class TemplateScreen extends StatefulWidget {
   const TemplateScreen({Key? key}) : super(key: key);
@@ -121,90 +122,151 @@ class _TemplateScreenState extends State<TemplateScreen> {
     final images = _getImagesForCurrentCategory();
     final imageUrl = images.isNotEmpty ? images[index % images.length] : null;
 
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () {
-          // TODO: 跳转到模板详情页
-        },
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppAssets.radius.lg),
+        boxShadow: AppAssets.shadows.light,
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppAssets.radius.lg),
+        child: Stack(
+          fit: StackFit.expand,
           children: [
-            // 模板预览图
-            Expanded(
-              child: imageUrl != null
-                  ? Image.network(
-                      imageUrl,
-                      fit: BoxFit.cover,
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
-                        return Center(
-                          child: CircularProgressIndicator(
-                            value: loadingProgress.expectedTotalBytes != null
-                                ? loadingProgress.cumulativeBytesLoaded /
-                                    loadingProgress.expectedTotalBytes!
-                                : null,
-                          ),
-                        );
-                      },
-                    )
-                  : Container(
-                      color: Colors.grey.shade200,
-                      child: const Center(
-                        child: Icon(Icons.image_outlined),
-                      ),
-                    ),
-            ),
+            // 背景图片
+            _buildTemplateImage(imageUrl),
+
+            // 渐变遮罩
+            _buildGradientOverlay(),
+
             // 模板信息
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '模板 ${index + 1}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.favorite_border,
-                        size: 16,
-                        color: Colors.grey.shade600,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${1000 + index}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                      const Spacer(),
-                      Icon(
-                        Icons.remove_red_eye_outlined,
-                        size: 16,
-                        color: Colors.grey.shade600,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${5000 + index}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
+            _buildTemplateInfo(index),
+
+            // 悬浮操作按钮
+            _buildFloatingActions(),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTemplateImage(String? imageUrl) {
+    return AnimatedSwitcher(
+      duration: AppAssets.animationDuration,
+      child: imageUrl != null
+          ? Image.network(
+              imageUrl,
+              fit: BoxFit.cover,
+              key: ValueKey(imageUrl),
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return Container(
+                  color: Colors.grey[200],
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      value: loadingProgress.expectedTotalBytes != null
+                          ? loadingProgress.cumulativeBytesLoaded /
+                              loadingProgress.expectedTotalBytes!
+                          : null,
+                    ),
+                  ),
+                );
+              },
+            )
+          : Container(
+              color: Colors.grey[200],
+              child: const Icon(Icons.image, size: 32),
+            ),
+    );
+  }
+
+  Widget _buildGradientOverlay() {
+    return Positioned.fill(
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.transparent,
+              Colors.black.withOpacity(0.7),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTemplateInfo(int index) {
+    return Positioned(
+      left: AppAssets.spacing.md,
+      right: AppAssets.spacing.md,
+      bottom: AppAssets.spacing.md,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '模板 ${index + 1}',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: AppAssets.fontSize.lg,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          SizedBox(height: AppAssets.spacing.xs),
+          Text(
+            '点击使用该模板',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.8),
+              fontSize: AppAssets.fontSize.xs,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFloatingActions() {
+    return Positioned(
+      top: AppAssets.spacing.sm,
+      right: AppAssets.spacing.sm,
+      child: Row(
+        children: [
+          _buildActionButton(
+            icon: Icons.favorite_border,
+            onTap: () {
+              // TODO: 收藏模板
+            },
+          ),
+          SizedBox(width: AppAssets.spacing.xs),
+          _buildActionButton(
+            icon: Icons.share_outlined,
+            onTap: () {
+              // TODO: 分享模板
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.black26,
+      borderRadius: BorderRadius.circular(AppAssets.radius.sm),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppAssets.radius.sm),
+        child: Container(
+          padding: EdgeInsets.all(AppAssets.spacing.xs),
+          child: Icon(
+            icon,
+            color: Colors.white,
+            size: 20,
+          ),
         ),
       ),
     );
