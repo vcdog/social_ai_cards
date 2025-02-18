@@ -6,7 +6,8 @@ class UnsplashService {
       '6BCnUd8uOQVNOSK6A2qubfjOJ2zmw07OSNbPKiVNXgU';
   static const String _baseUrl = 'https://api.unsplash.com';
 
-  Future<List<String>> getImagesByCategory(String category) async {
+  Future<List<String>> getImagesByCategory(String category,
+      {String size = 'regular'}) async {
     // 将中文分类转换为英文关键词
     final String searchTerm = _convertCategoryToSearchTerm(category);
 
@@ -23,9 +24,9 @@ class UnsplashService {
         final data = json.decode(response.body);
         final List<dynamic> results = data['results'];
 
-        // 使用 small 尺寸的图片 URL，这些 URL 支持 CORS
+        // 使用指定尺寸的图片 URL
         return results
-            .map<String>((photo) => photo['urls']['small'] as String)
+            .map<String>((photo) => photo['urls'][size] as String)
             .toList();
       } else {
         throw Exception('Failed to load images: ${response.statusCode}');
@@ -46,6 +47,8 @@ class UnsplashService {
       '生活': 'daily life moments',
       '创意': 'creative design',
       '其他': 'miscellaneous social',
+      // 添加作品展示相关的搜索词
+      'creative portfolio': 'creative portfolio work showcase',
     };
 
     return categoryMapping[category] ?? category;

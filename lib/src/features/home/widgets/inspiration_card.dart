@@ -80,6 +80,7 @@ class InspirationCard extends StatelessWidget {
               right: AppAssets.spacing.xs,
               child: _buildActionButton(
                 icon: Icons.favorite_border,
+                color: Colors.red,
                 onTap: () {
                   // TODO: 收藏灵感
                 },
@@ -131,19 +132,23 @@ class InspirationCard extends StatelessWidget {
   Widget _buildActionButton({
     required IconData icon,
     required VoidCallback onTap,
+    Color? color,
   }) {
-    return Material(
-      color: Colors.black26,
-      borderRadius: BorderRadius.circular(AppAssets.radius.sm),
-      child: InkWell(
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(AppAssets.radius.sm),
+        behavior: HitTestBehavior.opaque,
         child: Container(
-          padding: EdgeInsets.all(AppAssets.spacing.xs),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.3),
+            shape: BoxShape.circle,
+          ),
+          padding: const EdgeInsets.all(8),
           child: Icon(
             icon,
-            color: Colors.white,
-            size: 16,
+            color: color ?? Colors.white,
+            size: 20,
           ),
         ),
       ),
