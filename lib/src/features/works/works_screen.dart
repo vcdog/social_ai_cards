@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../services/unsplash_service.dart';
 
 class WorksScreen extends StatefulWidget {
   const WorksScreen({Key? key}) : super(key: key);
@@ -8,8 +9,32 @@ class WorksScreen extends StatefulWidget {
 }
 
 class _WorksScreenState extends State<WorksScreen> {
+  final UnsplashService _unsplashService = UnsplashService();
   bool _isSelectionMode = false;
   final Set<int> _selectedItems = <int>{};
+  List<String> _workImages = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadWorkImages();
+  }
+
+  Future<void> _loadWorkImages() async {
+    try {
+      // 获取适合作品展示的图片
+      final images =
+          await _unsplashService.getImagesByCategory('creative portfolio');
+      setState(() {
+        _workImages = images;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading work images: $e');
+      setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -164,14 +189,48 @@ class _WorksScreenState extends State<WorksScreen> {
               children: [
                 // 作品预览图
                 Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade200,
-                    ),
-                    child: Center(
-                      child: Text('作品 ${index + 1}'),
-                    ),
-                  ),
+                  child: _workImages.isEmpty
+                      ? Container(
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade200,
+                          ),
+                          child: Center(
+                            child: Icon(
+                              Icons.image_outlined,
+                              size: 32,
+                              color: Colors.grey.shade400,
+                            ),
+                          ),
+                        )
+                      : Image.network(
+                          _workImages[index % _workImages.length],
+                          fit: BoxFit.cover,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return Container(
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade200,
+                              ),
+                              child: const Center(
+                                child: CircularProgressIndicator(),
+                              ),
+                            );
+                          },
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade200,
+                              ),
+                              child: Center(
+                                child: Icon(
+                                  Icons.broken_image_outlined,
+                                  size: 32,
+                                  color: Colors.grey.shade400,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                 ),
                 // 作品信息
                 Padding(

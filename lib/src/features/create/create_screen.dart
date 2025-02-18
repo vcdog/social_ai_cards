@@ -9,7 +9,8 @@ class CreateScreen extends StatefulWidget {
   State<CreateScreen> createState() => _CreateScreenState();
 }
 
-class _CreateScreenState extends State<CreateScreen> with SingleTickerProviderStateMixin {
+class _CreateScreenState extends State<CreateScreen>
+    with SingleTickerProviderStateMixin {
   // 当前选中的编辑模式
   String _currentMode = 'template'; // template, edit, preview
   final UnsplashService _unsplashService = UnsplashService();
@@ -22,8 +23,8 @@ class _CreateScreenState extends State<CreateScreen> with SingleTickerProviderSt
     {'category': '创意', 'title': '创意设计', 'searchTerm': 'creative design'},
     {'category': '其他', 'title': '通用模板', 'searchTerm': 'general template'},
   ];
-  
-  Map<String, String> _templateImages = {};
+
+  Map<String, List<String>> _templateImages = {};
   bool _isLoading = true;
   // 添加文本编辑相关变量
   final TextEditingController _textController = TextEditingController();
@@ -81,11 +82,14 @@ class _CreateScreenState extends State<CreateScreen> with SingleTickerProviderSt
   // 添加当前颜色选择器页码
   int _currentColorPage = 0;
 
+  // 添加透明度控制变量
+  double _templateOpacity = 1.0;
+
   @override
   void initState() {
     super.initState();
     _loadTemplateImages();
-    
+
     // 初始化动画控制器
     _toolbarAnimController = AnimationController(
       duration: const Duration(milliseconds: 300),
@@ -121,11 +125,24 @@ class _CreateScreenState extends State<CreateScreen> with SingleTickerProviderSt
   Future<void> _loadTemplateImages() async {
     try {
       for (var template in _templates) {
-        final images = await _unsplashService.getImagesByCategory(template['searchTerm']);
-        if (images.isNotEmpty) {
-          // 随机选择一张图片
-          final randomIndex = Random().nextInt(images.length);
-          _templateImages[template['category']] = images[randomIndex];
+        final images = await _unsplashService.getImagesByCategory(
+          template['searchTerm'],
+          size: 'regular',
+        );
+        if (images.length >= 2) {
+          // 随机选择2张不同的图片
+          final List<String> selectedImages = [];
+          final random = Random();
+          while (selectedImages.length < 2) {
+            final randomIndex = random.nextInt(images.length);
+            final image = images[randomIndex];
+            if (!selectedImages.contains(image)) {
+              selectedImages.add(image);
+            }
+          }
+          setState(() {
+            _templateImages[template['category']] = selectedImages;
+          });
         }
       }
       setState(() {
@@ -133,9 +150,7 @@ class _CreateScreenState extends State<CreateScreen> with SingleTickerProviderSt
       });
     } catch (e) {
       print('Error loading template images: $e');
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
     }
   }
 
@@ -210,7 +225,9 @@ class _CreateScreenState extends State<CreateScreen> with SingleTickerProviderSt
           setState(() {
             // 如果正在编辑，先保存当前编辑的内容
             if (_isEditing) {
-              _editingText = _textController.text.isEmpty ? '在此处添加文本' : _textController.text;
+              _editingText = _textController.text.isEmpty
+                  ? '在此处添加文本'
+                  : _textController.text;
               _isEditing = false;
             }
             _currentMode = newSelection.first;
@@ -234,6 +251,10 @@ class _CreateScreenState extends State<CreateScreen> with SingleTickerProviderSt
   }
 
   Widget _buildTemplateSelector() {
+    return _buildTemplateGrid();
+  }
+
+  Widget _buildTemplateGrid() {
     return GridView.builder(
       padding: const EdgeInsets.all(16.0),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -245,117 +266,45 @@ class _CreateScreenState extends State<CreateScreen> with SingleTickerProviderSt
       itemCount: _templates.length,
       itemBuilder: (context, index) {
         final template = _templates[index];
-        final backgroundImage = _templateImages[template['category']];
+        final category = template['category'] as String;
+        final images = _templateImages[category] ?? [];
 
-        return Card(
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: () {
-              setState(() {
-                _currentMode = 'edit';
-                _selectedBackgroundImage = backgroundImage; // 保存选中的背景图片
-              });
-            },
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      if (backgroundImage != null)
-                        ColorFiltered(
-                          colorFilter: ColorFilter.mode(
-                            Colors.white.withOpacity(0.7),
-                            BlendMode.lighten,
-                          ),
-                          child: Image.network(
-                            backgroundImage,
-                            fit: BoxFit.cover,
-                            loadingBuilder: (context, child, loadingProgress) {
-                              if (loadingProgress == null) return child;
-                              return Center(
-                                child: CircularProgressIndicator(
-                                  value: loadingProgress.expectedTotalBytes != null
-                                      ? loadingProgress.cumulativeBytesLoaded /
-                                          loadingProgress.expectedTotalBytes!
-                                      : null,
-                                ),
-                              );
-                            },
-                          ),
-                        )
-                      else
-                        Container(
-                          color: Colors.grey.shade200,
-                          child: const Center(
-                            child: CircularProgressIndicator(),
-                          ),
-                        ),
-                      // 添加半透明遮罩
-                      Container(
+        return Column(
+          children: [
+            if (images.isNotEmpty)
+              Expanded(
+                child: PageView.builder(
+                  itemCount: images.length,
+                  itemBuilder: (context, imageIndex) {
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _selectedBackgroundImage = images[imageIndex];
+                          _currentMode = 'edit'; // 自动切换到编辑模式
+                        });
+                      },
+                      child: Container(
                         decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.black.withOpacity(0.1),
-                              Colors.black.withOpacity(0.3),
-                            ],
+                          borderRadius: BorderRadius.circular(8),
+                          image: DecorationImage(
+                            image: NetworkImage(images[imageIndex]),
+                            fit: BoxFit.cover,
                           ),
                         ),
                       ),
-                      // 分类标签
-                      Positioned(
-                        top: 8,
-                        left: 8,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.primary.withOpacity(0.8),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            template['category'],
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                    );
+                  },
                 ),
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        template['title'],
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '选择模板',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+              ),
+            const SizedBox(height: 8),
+            Text(
+              template['title'] as String,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
+          ],
         );
       },
     );
@@ -417,7 +366,8 @@ class _CreateScreenState extends State<CreateScreen> with SingleTickerProviderSt
                         onTap: () {
                           setState(() {
                             _isEditing = true;
-                            _textController.text = _editingText == '在此处添加文本' ? '' : _editingText;
+                            _textController.text =
+                                _editingText == '在此处添加文本' ? '' : _editingText;
                           });
                         },
                         child: _isEditing
@@ -440,7 +390,8 @@ class _CreateScreenState extends State<CreateScreen> with SingleTickerProviderSt
                                 ),
                                 onSubmitted: (value) {
                                   setState(() {
-                                    _editingText = value.isEmpty ? '在此处添加文本' : value;
+                                    _editingText =
+                                        value.isEmpty ? '在此处添加文本' : value;
                                     _isEditing = false;
                                   });
                                 },
@@ -568,7 +519,8 @@ class _CreateScreenState extends State<CreateScreen> with SingleTickerProviderSt
                 height: _showColorPicker ? null : 0,
                 child: _showColorPicker
                     ? Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 16),
                         decoration: BoxDecoration(
                           color: Colors.grey[100],
                           borderRadius: const BorderRadius.only(
@@ -585,14 +537,15 @@ class _CreateScreenState extends State<CreateScreen> with SingleTickerProviderSt
                 onTap: _toggleToolbar,
                 child: Container(
                   height: 40,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                   child: Row(
                     children: [
                       Transform.rotate(
                         angle: _arrowRotationAnimation.value,
                         child: Icon(
-                          _isToolbarExpanded 
-                              ? Icons.keyboard_arrow_down 
+                          _isToolbarExpanded
+                              ? Icons.keyboard_arrow_down
                               : Icons.keyboard_arrow_up,
                           size: 24,
                           color: Colors.black87,
@@ -700,7 +653,7 @@ class _CreateScreenState extends State<CreateScreen> with SingleTickerProviderSt
 
   Widget _buildGradientColorButton(int index) {
     if (index >= _gradientColors.length) return const SizedBox(width: 32);
-    
+
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -769,7 +722,9 @@ class _CreateScreenState extends State<CreateScreen> with SingleTickerProviderSt
                 width: 16,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: _currentColorPage == 0 ? Colors.yellow : Colors.grey.shade400,
+                  color: _currentColorPage == 0
+                      ? Colors.yellow
+                      : Colors.grey.shade400,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -778,7 +733,9 @@ class _CreateScreenState extends State<CreateScreen> with SingleTickerProviderSt
                 width: 16,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: _currentColorPage == 1 ? Colors.yellow : Colors.grey.shade400,
+                  color: _currentColorPage == 1
+                      ? Colors.yellow
+                      : Colors.grey.shade400,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -786,6 +743,301 @@ class _CreateScreenState extends State<CreateScreen> with SingleTickerProviderSt
           ),
         ),
       ],
+    );
+  }
+
+  // 修改透明度控制弹出层方法
+  void _showOpacityControl() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 标题行
+                Row(
+                  children: [
+                    const Icon(Icons.opacity, size: 24),
+                    const SizedBox(width: 12),
+                    Text(
+                      '背景透明度',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey[800],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                // 滑块控制器
+                Row(
+                  children: [
+                    Expanded(
+                      child: StatefulBuilder(
+                        builder: (context, setState) {
+                          return Slider(
+                            value: _templateOpacity,
+                            min: 0.0,
+                            max: 1.0,
+                            divisions: 100,
+                            label: '${(_templateOpacity * 100).round()}%',
+                            onChanged: (value) {
+                              setState(() {
+                                _templateOpacity = value;
+                              });
+                              // 更新父级状态
+                              this.setState(() {});
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                    SizedBox(
+                      width: 60,
+                      child: Text(
+                        '${(_templateOpacity * 100).round()}%',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey[600],
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // 修改样式工具栏
+  Widget _buildStyleToolbar() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          // 模板按钮
+          InkWell(
+            onTap: _showTemplateSelector,
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.image,
+                    color: _currentMode == 'template'
+                        ? Theme.of(context).primaryColor
+                        : Colors.grey[600],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '模板',
+                    style: TextStyle(
+                      color: _currentMode == 'template'
+                          ? Theme.of(context).primaryColor
+                          : Colors.grey[600],
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // 其他样式按钮...
+        ],
+      ),
+    );
+  }
+
+  // 修改模板图片显示部分
+  Widget _buildTemplatePreview() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            // 背景层
+            if (_selectedGradientIndex >= 0)
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: _gradientColors[_selectedGradientIndex],
+                  ),
+                ),
+              ),
+
+            // 模板图片层
+            if (_selectedBackgroundImage != null)
+              Positioned.fill(
+                child: InteractiveViewer(
+                  constrained: true,
+                  child: Opacity(
+                    opacity: _templateOpacity,
+                    child: Image.network(
+                      _selectedBackgroundImage!,
+                      fit: BoxFit.cover,
+                      frameBuilder:
+                          (context, child, frame, wasSynchronouslyLoaded) {
+                        if (frame == null) {
+                          return _buildLoadingPlaceholder();
+                        }
+                        return child;
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        return _buildErrorPlaceholder();
+                      },
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  // 添加占位符组件
+  Widget _buildLoadingPlaceholder() {
+    return Container(
+      color: Colors.grey[200],
+      child: const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+  }
+
+  Widget _buildErrorPlaceholder() {
+    return Container(
+      color: Colors.grey[200],
+      child: Icon(
+        Icons.broken_image_outlined,
+        size: 48,
+        color: Colors.grey[400],
+      ),
+    );
+  }
+
+  // 修改模板选择器的实现
+  void _showTemplateSelector() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 标题栏
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.image, size: 24),
+                      const SizedBox(width: 12),
+                      Text(
+                        '选择模板',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey[800],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // 模板网格
+                SizedBox(
+                  height: 240,
+                  child: GridView.builder(
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 4,
+                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 12,
+                      childAspectRatio: 1,
+                    ),
+                    itemCount: _templateImages.values
+                        .expand((images) => images)
+                        .toList()
+                        .length,
+                    itemBuilder: (context, index) {
+                      final allImages = _templateImages.values
+                          .expand((images) => images)
+                          .toList();
+                      return Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () {
+                            setState(() {
+                              _selectedBackgroundImage = allImages[index];
+                            });
+                            Navigator.pop(context);
+                          },
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              image: DecorationImage(
+                                image: NetworkImage(allImages[index]),
+                                fit: BoxFit.cover,
+                              ),
+                              border:
+                                  _selectedBackgroundImage == allImages[index]
+                                      ? Border.all(
+                                          color: Theme.of(context).primaryColor,
+                                          width: 2,
+                                        )
+                                      : null,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
