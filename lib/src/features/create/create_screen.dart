@@ -31,6 +31,8 @@ class _CreateScreenState extends State<CreateScreen> with SingleTickerProviderSt
   String _editingText = '在此处添加文本';
   double _textSize = 16.0;
   Color _textColor = Colors.black87;
+  Color _backgroundColor = Colors.white; // 默认白色背景
+  bool _isColorPickerVisible = false;
 
   // 添加工具栏展开状态控制
   bool _isToolbarExpanded = false;
@@ -80,6 +82,12 @@ class _CreateScreenState extends State<CreateScreen> with SingleTickerProviderSt
   int _selectedGradientIndex = -1;
   // 添加当前颜色选择器页码
   int _currentColorPage = 0;
+
+  // 添加选中的工具栏项状态
+  String _selectedToolbarItem = '模板'; // 默认选中模板
+
+  // 在 _CreateScreenState 类中添加新的状态变量
+  bool _isStyleButtonHovered = false; // 用于控制按钮的悬停/选中效果
 
   @override
   void initState() {
@@ -143,79 +151,136 @@ class _CreateScreenState extends State<CreateScreen> with SingleTickerProviderSt
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('创建卡片'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [
-          // 预览按钮
           IconButton(
-            icon: const Icon(Icons.remove_red_eye_outlined),
+            icon: const Icon(Icons.visibility),
             onPressed: () {
-              setState(() {
-                _currentMode = 'preview';
-              });
+              // 预览功能
             },
           ),
-          // 保存按钮
           IconButton(
-            icon: const Icon(Icons.save_outlined),
+            icon: const Icon(Icons.save),
             onPressed: () {
-              // TODO: 实现保存功能
+              // 保存功能
             },
           ),
         ],
       ),
       body: Column(
         children: [
-          // 顶部模式切换
-          _buildModeSwitch(),
-
-          // 主要内容区域
+          // 卡片主体
           Expanded(
-            child: _buildMainContent(),
+            child: Container(
+              margin: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: _backgroundColor,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Center(
+                child: Text('在此输入文本'),
+              ),
+            ),
           ),
-
-          // 底部工具栏
-          if (_currentMode == 'edit') _buildToolbar(),
         ],
       ),
-    );
-  }
-
-  Widget _buildModeSwitch() {
-    return Container(
-      padding: const EdgeInsets.all(8.0),
-      child: SegmentedButton<String>(
-        segments: const [
-          ButtonSegment(
-            value: 'template',
-            icon: Icon(Icons.dashboard_outlined),
-            label: Text('模板'),
-          ),
-          ButtonSegment(
-            value: 'edit',
-            icon: Icon(Icons.edit_outlined),
-            label: Text('编辑'),
-          ),
-          ButtonSegment(
-            value: 'preview',
-            icon: Icon(Icons.remove_red_eye_outlined),
-            label: Text('预览'),
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // 模板选择器（当选中模板时显示）
+          if (_selectedToolbarItem == '模板')
+            _buildTemplateSelector(),
+          // 颜色选择器
+          if (_selectedToolbarItem == '颜色')
+            _buildColorPicker(),
+          // 底部工具栏
+          Container(
+            height: 68, // 1.8cm
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              border: Border(
+                top: BorderSide(
+                  color: Colors.white,
+                  width: 1,
+                ),
+              ),
+            ),
+            child: Stack(
+              children: [
+                Positioned(
+                  left: 16,
+                  top: 12,
+                  child: Row(
+                    children: [
+                      GestureDetector(
+                        onTapDown: (_) => setState(() => _isStyleButtonHovered = true),
+                        onTapUp: (_) => setState(() => _isStyleButtonHovered = false),
+                        onTapCancel: () => setState(() => _isStyleButtonHovered = false),
+                        onTap: _toggleToolbar,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: _isStyleButtonHovered ? Colors.grey.shade200 : Colors.transparent,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              Transform.rotate(
+                                angle: _arrowRotationAnimation.value,
+                                child: Icon(
+                                  _isToolbarExpanded 
+                                      ? Icons.keyboard_arrow_down 
+                                      : Icons.keyboard_arrow_up,
+                                  size: 24,
+                                  color: _isStyleButtonHovered 
+                                      ? Theme.of(context).primaryColor 
+                                      : Colors.black87,
+                                ),
+                              ),
+                              // 只在未展开时显示"卡片样式"文字
+                              if (!_isToolbarExpanded) ...[
+                                const SizedBox(width: 4),
+                                Text(
+                                  '卡片样式',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w500,
+                                    color: _isStyleButtonHovered 
+                                        ? Theme.of(context).primaryColor 
+                                        : Colors.black87,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                      // 展开时显示工具栏选项
+                      if (_isToolbarExpanded)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 32),
+                          child: Row(
+                            children: [
+                              _buildToolbarItem('模板'),
+                              const SizedBox(width: 32),
+                              _buildToolbarItem('文字'),
+                              const SizedBox(width: 32),
+                              _buildToolbarItem('颜色'),
+                              const SizedBox(width: 32),
+                              _buildToolbarItem('显隐'),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
-        selected: {_currentMode},
-        onSelectionChanged: (Set<String> newSelection) {
-          setState(() {
-            // 如果正在编辑，先保存当前编辑的内容
-            if (_isEditing) {
-              _editingText = _textController.text.isEmpty ? '在此处添加文本' : _textController.text;
-              _isEditing = false;
-            }
-            _currentMode = newSelection.first;
-          });
-        },
       ),
     );
   }
@@ -234,42 +299,73 @@ class _CreateScreenState extends State<CreateScreen> with SingleTickerProviderSt
   }
 
   Widget _buildTemplateSelector() {
-    return GridView.builder(
-      padding: const EdgeInsets.all(16.0),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        mainAxisSpacing: 16.0,
-        crossAxisSpacing: 16.0,
-        childAspectRatio: 0.75,
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(12),
+          topRight: Radius.circular(12),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            offset: const Offset(0, -2),
+            blurRadius: 8,
+            spreadRadius: 0,
+          ),
+        ],
       ),
-      itemCount: _templates.length,
-      itemBuilder: (context, index) {
-        final template = _templates[index];
-        final backgroundImage = _templateImages[template['category']];
-
-        return Card(
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: () {
-              setState(() {
-                _currentMode = 'edit';
-                _selectedBackgroundImage = backgroundImage; // 保存选中的背景图片
-              });
-            },
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      if (backgroundImage != null)
-                        ColorFiltered(
-                          colorFilter: ColorFilter.mode(
-                            Colors.white.withOpacity(0.7),
-                            BlendMode.lighten,
-                          ),
-                          child: Image.network(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // 模板网格
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
+              childAspectRatio: 1.5,
+            ),
+            itemCount: _templates.length,
+            itemBuilder: (context, index) {
+              final template = _templates[index];
+              final backgroundImage = _templateImages[template['category']];
+              
+              return GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _selectedBackgroundImage = backgroundImage;
+                  });
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: _selectedBackgroundImage == backgroundImage
+                          ? Theme.of(context).primaryColor
+                          : Colors.grey.shade300,
+                      width: 1,
+                    ),
+                    boxShadow: _selectedBackgroundImage == backgroundImage
+                        ? [
+                            BoxShadow(
+                              color: Theme.of(context).primaryColor.withOpacity(0.3),
+                              blurRadius: 6,
+                              spreadRadius: 1,
+                            )
+                          ]
+                        : null,
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        if (backgroundImage != null)
+                          Image.network(
                             backgroundImage,
                             fit: BoxFit.cover,
                             loadingBuilder: (context, child, loadingProgress) {
@@ -284,80 +380,37 @@ class _CreateScreenState extends State<CreateScreen> with SingleTickerProviderSt
                               );
                             },
                           ),
-                        )
-                      else
                         Container(
-                          color: Colors.grey.shade200,
-                          child: const Center(
-                            child: CircularProgressIndicator(),
-                          ),
-                        ),
-                      // 添加半透明遮罩
-                      Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.black.withOpacity(0.1),
-                              Colors.black.withOpacity(0.3),
-                            ],
-                          ),
-                        ),
-                      ),
-                      // 分类标签
-                      Positioned(
-                        top: 8,
-                        left: 8,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.primary.withOpacity(0.8),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            template['category'],
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.black.withOpacity(0.2),
+                                Colors.black.withOpacity(0.4),
+                              ],
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                        Center(
+                          child: Text(
+                            template['title'] as String,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        template['title'],
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '选择模板',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+              );
+            },
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 
@@ -545,140 +598,30 @@ class _CreateScreenState extends State<CreateScreen> with SingleTickerProviderSt
     );
   }
 
-  Widget _buildToolbar() {
-    return AnimatedBuilder(
-      animation: _toolbarAnimController,
-      builder: (context, child) {
-        return Container(
-          decoration: BoxDecoration(
-            color: Colors.grey[100],
-            border: Border(
-              top: BorderSide(
-                color: Colors.white,
-                width: 1,
-              ),
-            ),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 颜色选择器（当点击颜色按钮时显示）
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                height: _showColorPicker ? null : 0,
-                child: _showColorPicker
-                    ? Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[100],
-                          borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(12),
-                            topRight: Radius.circular(12),
-                          ),
-                        ),
-                        child: _buildColorPicker(),
-                      )
-                    : null,
-              ),
-              // 工具栏
-              InkWell(
-                onTap: _toggleToolbar,
-                child: Container(
-                  height: 40,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  child: Row(
-                    children: [
-                      Transform.rotate(
-                        angle: _arrowRotationAnimation.value,
-                        child: Icon(
-                          _isToolbarExpanded 
-                              ? Icons.keyboard_arrow_down 
-                              : Icons.keyboard_arrow_up,
-                          size: 24,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      if (!_isToolbarExpanded)
-                        const Text(
-                          '样式编辑',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.black87,
-                          ),
-                        ),
-                      if (_isToolbarExpanded) ...[
-                        Expanded(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
-                            children: [
-                              _buildToolbarItem('模板'),
-                              _buildToolbarItem('文字'),
-                              _buildToolbarItem('颜色'),
-                              _buildToolbarItem('显隐'),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-              // 工具栏内容
-              if (!_isToolbarExpanded)
-                ClipRect(
-                  child: Align(
-                    heightFactor: 1.0 - _toolbarSlideAnimation.value,
-                    child: Container(
-                      height: 48,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _buildToolbarItem('模板'),
-                          _buildToolbarItem('文字'),
-                          _buildToolbarItem('颜色'),
-                          _buildToolbarItem('显隐'),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  // 添加颜色选择器显示状态
-  bool _showColorPicker = false;
-
+  // 修改工具栏项构建方法
   Widget _buildToolbarItem(String label) {
+    final isSelected = _selectedToolbarItem == label;
+    
     return GestureDetector(
-      onTapDown: (TapDownDetails details) {
-        switch (label) {
-          case '颜色':
-            setState(() {
-              _showColorPicker = !_showColorPicker;
-            });
-            break;
-          // TODO: 处理其他按钮点击事件
-        }
+      onTap: () {
+        setState(() {
+          _selectedToolbarItem = label;
+        });
       },
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(8),
-          color: Colors.transparent,
+          color: isSelected ? Colors.grey.shade200 : Colors.transparent,
         ),
         child: Padding(
-          padding: const EdgeInsets.all(8.0),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           child: Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
-              color: Colors.black87,
+              color: isSelected
+                  ? Theme.of(context).primaryColor
+                  : Colors.black87,
             ),
           ),
         ),
@@ -686,44 +629,18 @@ class _CreateScreenState extends State<CreateScreen> with SingleTickerProviderSt
     );
   }
 
-  // 工具栏展开/收起切换
+  // 修改工具栏切换方法
   void _toggleToolbar() {
     setState(() {
       _isToolbarExpanded = !_isToolbarExpanded;
       if (_isToolbarExpanded) {
         _toolbarAnimController.reverse();
+        _selectedToolbarItem = '模板'; // 展开时默认选中模板
       } else {
         _toolbarAnimController.forward();
+        _selectedToolbarItem = ''; // 收起时清除选中状态
       }
     });
-  }
-
-  Widget _buildGradientColorButton(int index) {
-    if (index >= _gradientColors.length) return const SizedBox(width: 32);
-    
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedGradientIndex = index;
-        });
-        // TODO: 应用选中的渐变色
-      },
-      child: Container(
-        width: 32,
-        height: 32,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: _gradientColors[index],
-          ),
-          border: _selectedGradientIndex == index
-              ? Border.all(color: Colors.yellow, width: 2)
-              : null,
-        ),
-      ),
-    );
   }
 
   // 添加页面切换方法
@@ -733,59 +650,126 @@ class _CreateScreenState extends State<CreateScreen> with SingleTickerProviderSt
     });
   }
 
-  // 修改颜色选择器部分的代码
+  // 修改颜色选择器的布局
   Widget _buildColorPicker() {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // 渐变色按钮网格
-        Wrap(
-          alignment: WrapAlignment.spaceEvenly,
-          spacing: 8,
-          runSpacing: 8,
-          children: List.generate(8, (index) {
-            final colorIndex = _currentColorPage * 16 + index;
-            return _buildGradientColorButton(colorIndex);
-          }),
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(12),
+          topRight: Radius.circular(12),
         ),
-        const SizedBox(height: 16),
-        Wrap(
-          alignment: WrapAlignment.spaceEvenly,
-          spacing: 8,
-          runSpacing: 8,
-          children: List.generate(8, (index) {
-            final colorIndex = _currentColorPage * 16 + index + 8;
-            return _buildGradientColorButton(colorIndex);
-          }),
-        ),
-        const SizedBox(height: 16),
-        // 页面指示器和切换按钮
-        GestureDetector(
-          onTap: _toggleColorPage,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 16,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: _currentColorPage == 0 ? Colors.yellow : Colors.grey.shade400,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(width: 4),
-              Container(
-                width: 16,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: _currentColorPage == 1 ? Colors.yellow : Colors.grey.shade400,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            offset: const Offset(0, -2),
+            blurRadius: 8,
+            spreadRadius: 0,
           ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // 颜色网格 - 每页2行，每行8个
+          if (_currentColorPage == 0) ...[
+            // 第一页
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: List.generate(8, (index) => _buildGradientColorButton(index)),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: List.generate(8, (index) => _buildGradientColorButton(index + 8)),
+            ),
+          ] else ...[
+            // 第二页
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: List.generate(8, (index) => _buildGradientColorButton(index + 16)),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: List.generate(8, (index) => _buildGradientColorButton(index + 24)),
+            ),
+          ],
+          const SizedBox(height: 8),
+          // 页面指示器
+          Center(
+            child: GestureDetector(
+              onTap: _toggleColorPage,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 16,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: _currentColorPage == 0 
+                          ? Theme.of(context).primaryColor 
+                          : Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Container(
+                    width: 16,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: _currentColorPage == 1 
+                          ? Theme.of(context).primaryColor 
+                          : Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 修改颜色按钮的大小
+  Widget _buildGradientColorButton(int index) {
+    if (index >= _gradientColors.length) return const SizedBox(width: 32);
+    
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedGradientIndex = index;
+          _backgroundColor = _gradientColors[index][0];
+        });
+      },
+      child: Container(
+        width: 32,  // 调小色块尺寸
+        height: 32, // 调小色块尺寸
+        margin: const EdgeInsets.all(1), // 减小边距
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: _gradientColors[index],
+          ),
+          border: _selectedGradientIndex == index
+              ? Border.all(color: Colors.yellow, width: 2)
+              : Border.all(color: Colors.grey.shade300, width: 1),
+          boxShadow: _selectedGradientIndex == index
+              ? [
+                  BoxShadow(
+                    color: Colors.yellow.withOpacity(0.3),
+                    blurRadius: 6, // 减小阴影
+                    spreadRadius: 1,
+                  )
+                ]
+              : null,
         ),
-      ],
+      ),
     );
   }
 }
