@@ -6,30 +6,32 @@ class UnsplashService {
       '6BCnUd8uOQVNOSK6A2qubfjOJ2zmw07OSNbPKiVNXgU';
   static const String _baseUrl = 'https://api.unsplash.com';
 
-  Future<List<String>> getImagesByCategory(String category,
-      {String size = 'regular'}) async {
-    // 将中文分类转换为英文关键词
-    final String searchTerm = _convertCategoryToSearchTerm(category);
-
+  Future<List<String>> getImagesByCategory(
+    String query, {
+    String size = 'regular',
+    int page = 1,
+    int perPage = 10,
+  }) async {
     try {
       final response = await http.get(
-        Uri.parse('$_baseUrl/search/photos?query=$searchTerm&per_page=10'),
+        Uri.parse(
+          '$_baseUrl/search/photos?query=$query&page=$page&per_page=$perPage',
+        ),
         headers: {
           'Authorization': 'Client-ID $_accessKey',
-          'Accept-Version': 'v1', // 添加 API 版本
         },
       );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        final List<dynamic> results = data['results'];
-
-        // 使用指定尺寸的图片 URL
-        return results
-            .map<String>((photo) => photo['urls'][size] as String)
-            .toList();
+        final results = data['results'] as List;
+        
+        return results.map<String>((photo) {
+          return photo['urls'][size] as String;
+        }).toList();
       } else {
-        throw Exception('Failed to load images: ${response.statusCode}');
+        print('Error: ${response.statusCode}');
+        return [];
       }
     } catch (e) {
       print('Error fetching images: $e');
@@ -37,18 +39,26 @@ class UnsplashService {
     }
   }
 
-  String _convertCategoryToSearchTerm(String category) {
+  String convertCategoryToSearchTerm(String category) {
     // 中文分类映射到英文搜索关键词
     final Map<String, String> categoryMapping = {
-      '热门': 'trending social media',
-      '节日': 'festival celebration',
-      '商务': 'business professional',
-      '社交': 'social media lifestyle',
-      '生活': 'daily life moments',
-      '创意': 'creative design',
-      '其他': 'miscellaneous social',
-      // 添加作品展示相关的搜索词
-      'creative portfolio': 'creative portfolio work showcase',
+      '照片': 'photos',
+      '插画': 'illustrations',
+      '壁纸': 'wallpapers',
+      '自然': 'nature',
+      '3D': '3d renders',
+      '纹理': 'textures',
+      '建筑': 'architecture & interiors',
+      '旅行': 'travel',
+      '电影': 'film',
+      '街拍': 'street photography',
+      '人物': 'people',
+      '动物': 'animals',
+      '实验': 'experimental',
+      '时尚': 'fashion & beauty',
+      '美食': 'food & drink',
+      '运动': 'sports',
+      '健康': 'health & wellness',
     };
 
     return categoryMapping[category] ?? category;

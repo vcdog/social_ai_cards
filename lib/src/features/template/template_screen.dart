@@ -19,7 +19,7 @@ class _TemplateScreenState extends State<TemplateScreen> {
   @override
   void initState() {
     super.initState();
-    _loadImagesForCategory('热门'); // 默认加载热门分类
+    _loadImagesForCategory('照片'); // 改为默认加载"照片"分类
   }
 
   Future<void> _loadImagesForCategory(String category) async {
@@ -28,7 +28,8 @@ class _TemplateScreenState extends State<TemplateScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final images = await _unsplashService.getImagesByCategory(category);
+      final searchTerm = _unsplashService.convertCategoryToSearchTerm(category);
+      final images = await _unsplashService.getImagesByCategory(searchTerm);
       setState(() {
         _categoryImages[category] = images;
       });
@@ -93,22 +94,44 @@ class _TemplateScreenState extends State<TemplateScreen> {
   }
 
   Widget _buildCategoryTabs() {
-    final categories = ['全部', '热门', '节日', '商务', '社交', '生活', '创意', '其他'];
+    final categories = [
+      '全部',
+      '照片',
+      '插画',
+      '壁纸',
+      '自然',
+      '3D',
+      '纹理',
+      '建筑',
+      '旅行',
+      '电影',
+      '街拍',
+      '人物',
+      '动物',
+      '实验',
+      '时尚',
+      '美食',
+      '运动',
+      '健康'
+    ];
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
       child: Row(
         children: categories.map((category) {
+          final isSelected = _selectedCategory == category;
           return Padding(
             padding: const EdgeInsets.only(right: 8.0),
             child: FilterChip(
               label: Text(category),
-              selected: _selectedCategory == category,
+              selected: isSelected,
               onSelected: (selected) {
                 setState(() {
                   _selectedCategory = category;
-                  _loadImagesForCategory(category);
+                  if (category != '全部') {
+                    _loadImagesForCategory(category);
+                  }
                 });
               },
             ),
