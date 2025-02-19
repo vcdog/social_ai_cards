@@ -3,12 +3,11 @@ import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'src/common/router/app_router.dart';
 import 'src/common/providers/locale_provider.dart';
-import 'src/common/constants/supported_locales.dart';
 import 'src/common/providers/theme_provider.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   runApp(
     MultiProvider(
       providers: [

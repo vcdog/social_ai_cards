@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/unsplash_service.dart';
 import 'dart:math';
+import 'package:google_fonts/google_fonts.dart';
 
 class CreateScreen extends StatefulWidget {
   const CreateScreen({Key? key}) : super(key: key);
@@ -58,23 +59,23 @@ class _CreateScreenState extends State<CreateScreen>
     [Colors.green.shade200, Colors.lightGreen.shade100],
     [Colors.blue.shade100, Colors.lightBlue.shade100],
     [Colors.pink.shade100, Colors.purple.shade100],
-    // 第二页 - 深色系
-    [Colors.blue.shade900, Colors.indigo.shade800],
-    [Colors.purple.shade900, Colors.deepPurple.shade800],
-    [Colors.red.shade900, Colors.redAccent.shade700],
-    [Colors.green.shade900, Colors.teal.shade800],
-    [Colors.brown.shade900, Colors.brown.shade800],
-    [Colors.grey.shade900, Colors.blueGrey.shade800],
-    [Colors.indigo.shade900, Colors.blue.shade900],
-    [Colors.deepPurple.shade900, Colors.purple.shade900],
-    [Colors.pink.shade900, Colors.red.shade900],
-    [Colors.teal.shade900, Colors.green.shade900],
-    [Colors.blueGrey.shade900, Colors.grey.shade900],
-    [Colors.deepOrange.shade900, Colors.orange.shade900],
-    [Colors.cyan.shade900, Colors.blue.shade900],
-    [Colors.amber.shade900, Colors.orange.shade900],
-    [Colors.lime.shade900, Colors.green.shade900],
-    [Colors.black, Colors.grey.shade900],
+    // 第二页 - 深色系（修复后的设计）
+    [const Color(0xFF000428), const Color(0xFF004e92)], // Midnight City
+    [const Color(0xFF1a0f0f), const Color(0xFF6a0000)], // Deep Red
+    [const Color(0xFF0f2027), const Color(0xFF203a43)], // Deep Ocean
+    [const Color(0xFF000046), const Color(0xFF1CB5E0)], // Ocean Night
+    [const Color(0xFF16222A), const Color(0xFF3A6073)], // Steel Gray
+    [const Color(0xFF1F1C2C), const Color(0xFF928DAB)], // Midnight Purple
+    [const Color(0xFF141E30), const Color(0xFF243B55)], // Royal Blue
+    [const Color(0xFF232526), const Color(0xFF414345)], // Coal
+    [const Color(0xFF000000), const Color(0xFF434343)], // Black Elegance
+    [const Color(0xFF1e130c), const Color(0xFF9a8478)], // Coffee
+    [const Color(0xFF29323c), const Color(0xFF485563)], // Slate
+    [const Color(0xFF093028), const Color(0xFF237A57)], // Forest
+    [const Color(0xFF2C5364), const Color(0xFF203A43)], // Deep Sea
+    [const Color(0xFF2C3E50), const Color(0xFF3498DB)], // Midnight Blue
+    [const Color(0xFF4B1248), const Color(0xFFF02FC2)], // Dark Purple
+    [const Color(0xFF0A2E38), const Color(0xFF00F0B5)], // Aurora Borealis
   ];
 
   // 添加当前选中的渐变色索引
@@ -84,6 +85,46 @@ class _CreateScreenState extends State<CreateScreen>
 
   // 添加透明度控制变量
   double _templateOpacity = 1.0;
+
+  // 添加模板选择器显示状态
+  bool _showTemplateSelector = false;
+
+  // 添加文字选择器状态
+  bool _showTextEditor = false;
+
+  // 添加文字相关属性
+  double _fontSize = 16.0;
+  TextAlign _textAlign = TextAlign.center;
+
+  // 修改字体列表，使用正确的 Google Fonts 方法
+  final List<Map<String, dynamic>> _fontFamilies = [
+    {'name': '默认', 'textStyle': null},
+    {
+      'name': '思源黑体',
+      'textStyle': GoogleFonts.notoSans(),
+    },
+    {
+      'name': '思源宋体',
+      'textStyle': GoogleFonts.notoSerif(),
+    },
+    {
+      'name': 'ZCOOL楷体',
+      'textStyle': GoogleFonts.zcoolKuaiLe(),
+    },
+    {
+      'name': 'ZCOOL圆体',
+      'textStyle': GoogleFonts.zcoolXiaoWei(),
+    },
+    {
+      'name': '马善政',
+      'textStyle': GoogleFonts.maShanZheng(),
+    },
+    {
+      'name': '霞鹜文楷',
+      'textStyle': GoogleFonts.longCang(),
+    },
+  ];
+  TextStyle? _selectedFontStyle;
 
   @override
   void initState() {
@@ -117,8 +158,8 @@ class _CreateScreenState extends State<CreateScreen>
 
   @override
   void dispose() {
-    _toolbarAnimController.dispose();
     _textController.dispose();
+    _toolbarAnimController.dispose();
     super.dispose();
   }
 
@@ -251,62 +292,74 @@ class _CreateScreenState extends State<CreateScreen>
   }
 
   Widget _buildTemplateSelector() {
-    return _buildTemplateGrid();
-  }
-
-  Widget _buildTemplateGrid() {
-    return GridView.builder(
-      padding: const EdgeInsets.all(16.0),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        mainAxisSpacing: 16.0,
-        crossAxisSpacing: 16.0,
-        childAspectRatio: 0.75,
-      ),
-      itemCount: _templates.length,
-      itemBuilder: (context, index) {
-        final template = _templates[index];
-        final category = template['category'] as String;
-        final images = _templateImages[category] ?? [];
-
-        return Column(
-          children: [
-            if (images.isNotEmpty)
-              Expanded(
-                child: PageView.builder(
-                  itemCount: images.length,
-                  itemBuilder: (context, imageIndex) {
-                    return GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _selectedBackgroundImage = images[imageIndex];
-                          _currentMode = 'edit'; // 自动切换到编辑模式
-                        });
-                      },
-                      child: Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(8),
-                          image: DecorationImage(
-                            image: NetworkImage(images[imageIndex]),
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            const SizedBox(height: 8),
-            Text(
-              template['title'] as String,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Expanded(
+          child: GridView.builder(
+            padding: const EdgeInsets.all(16),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2, // 每行2个模板
+              mainAxisSpacing: 16,
+              crossAxisSpacing: 16,
+              childAspectRatio: 0.75, // 长宽比
             ),
-          ],
-        );
-      },
+            itemCount: _templateImages.values
+                .expand((images) => images)
+                .toList()
+                .length,
+            itemBuilder: (context, index) {
+              final images =
+                  _templateImages.values.expand((images) => images).toList();
+              final imageUrl = images.isNotEmpty ? images[index] : null;
+
+              return GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _selectedBackgroundImage = imageUrl;
+                    _currentMode = 'edit'; // 选择后自动切换到编辑模式
+                  });
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: _selectedBackgroundImage == imageUrl
+                          ? Theme.of(context).colorScheme.primary
+                          : Colors.grey.withOpacity(0.2),
+                      width: 2,
+                    ),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: imageUrl != null
+                        ? Image.network(
+                            imageUrl,
+                            fit: BoxFit.cover,
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return const Center(
+                                child: SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                              );
+                            },
+                          )
+                        : Container(
+                            color: Colors.grey[200],
+                            child: const Icon(Icons.image, size: 32),
+                          ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -333,17 +386,33 @@ class _CreateScreenState extends State<CreateScreen>
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    if (_selectedBackgroundImage != null)
-                      ColorFiltered(
-                        colorFilter: ColorFilter.mode(
-                          Colors.white.withOpacity(0.7),
-                          BlendMode.lighten,
-                        ),
-                        child: ClipRRect(
+                    // 添加渐变色背景
+                    if (_selectedGradientIndex >= 0)
+                      Container(
+                        decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(12),
-                          child: Image.network(
-                            _selectedBackgroundImage!,
-                            fit: BoxFit.cover,
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: _gradientColors[_selectedGradientIndex],
+                          ),
+                        ),
+                      ),
+                    // 背景图片
+                    if (_selectedBackgroundImage != null)
+                      Opacity(
+                        opacity: _templateOpacity,
+                        child: ColorFiltered(
+                          colorFilter: ColorFilter.mode(
+                            Colors.white.withOpacity(0.7),
+                            BlendMode.lighten,
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.network(
+                              _selectedBackgroundImage!,
+                              fit: BoxFit.cover,
+                            ),
                           ),
                         ),
                       ),
@@ -373,18 +442,11 @@ class _CreateScreenState extends State<CreateScreen>
                         child: _isEditing
                             ? TextField(
                                 controller: _textController,
-                                autofocus: true,
+                                style: _getTextStyle(),
+                                textAlign: _textAlign,
                                 maxLines: null,
-                                textAlign: TextAlign.center,
-                                enableInteractiveSelection: true,
-                                style: TextStyle(
-                                  fontSize: _textSize,
-                                  color: _textColor,
-                                  height: 1.5,
-                                ),
                                 decoration: const InputDecoration(
                                   border: InputBorder.none,
-                                  hintText: '输入文本',
                                   isDense: true,
                                   contentPadding: EdgeInsets.zero,
                                 ),
@@ -395,20 +457,19 @@ class _CreateScreenState extends State<CreateScreen>
                                     _isEditing = false;
                                   });
                                 },
-                                onChanged: (value) {
+                                onTapOutside: (event) {
                                   setState(() {
-                                    _editingText = value;
+                                    _editingText = _textController.text.isEmpty
+                                        ? '在此处添加文本'
+                                        : _textController.text;
+                                    _isEditing = false;
                                   });
                                 },
                               )
                             : Text(
                                 _editingText,
-                                style: TextStyle(
-                                  fontSize: _textSize,
-                                  color: _textColor,
-                                  height: 1.5,
-                                ),
-                                textAlign: TextAlign.center,
+                                style: _getTextStyle(),
+                                textAlign: _textAlign,
                                 softWrap: true,
                                 overflow: TextOverflow.visible,
                               ),
@@ -444,18 +505,33 @@ class _CreateScreenState extends State<CreateScreen>
           child: Stack(
             fit: StackFit.expand,
             children: [
+              // 添加渐变色背景
+              if (_selectedGradientIndex >= 0)
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: _gradientColors[_selectedGradientIndex],
+                    ),
+                  ),
+                ),
               // 背景图片
               if (_selectedBackgroundImage != null)
-                ColorFiltered(
-                  colorFilter: ColorFilter.mode(
-                    Colors.white.withOpacity(0.7),
-                    BlendMode.lighten,
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.network(
-                      _selectedBackgroundImage!,
-                      fit: BoxFit.cover,
+                Opacity(
+                  opacity: _templateOpacity,
+                  child: ColorFiltered(
+                    colorFilter: ColorFilter.mode(
+                      Colors.white.withOpacity(0.7),
+                      BlendMode.lighten,
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.network(
+                        _selectedBackgroundImage!,
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ),
                 ),
@@ -479,11 +555,7 @@ class _CreateScreenState extends State<CreateScreen>
                 child: Text(
                   // 如果正在编辑，使用 TextField 的当前值
                   _isEditing ? _textController.text : _editingText,
-                  style: TextStyle(
-                    fontSize: _textSize,
-                    color: _textColor,
-                    height: 1.5,
-                  ),
+                  style: _getTextStyle(),
                   textAlign: TextAlign.center,
                   softWrap: true,
                   overflow: TextOverflow.visible,
@@ -497,95 +569,75 @@ class _CreateScreenState extends State<CreateScreen>
   }
 
   Widget _buildToolbar() {
-    return AnimatedBuilder(
-      animation: _toolbarAnimController,
-      builder: (context, child) {
-        return Container(
-          decoration: BoxDecoration(
-            color: Colors.grey[100],
-            border: Border(
-              top: BorderSide(
-                color: Colors.white,
-                width: 1,
-              ),
-            ),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        border: Border(
+          top: BorderSide(
+            color: Colors.white,
+            width: 1,
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 颜色选择器（当点击颜色按钮时显示）
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                height: _showColorPicker ? null : 0,
-                child: _showColorPicker
-                    ? Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 16),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[100],
-                          borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(12),
-                            topRight: Radius.circular(12),
-                          ),
-                        ),
-                        child: _buildColorPicker(),
-                      )
-                    : null,
-              ),
-              // 工具栏
-              InkWell(
-                onTap: _toggleToolbar,
-                child: Container(
-                  height: 40,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  child: Row(
-                    children: [
-                      Transform.rotate(
-                        angle: _arrowRotationAnimation.value,
-                        child: Icon(
-                          _isToolbarExpanded
-                              ? Icons.keyboard_arrow_down
-                              : Icons.keyboard_arrow_up,
-                          size: 24,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      if (!_isToolbarExpanded)
-                        const Text(
-                          '样式编辑',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.black87,
-                          ),
-                        ),
-                      if (_isToolbarExpanded) ...[
-                        Expanded(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
-                            children: [
-                              _buildToolbarItem('模板'),
-                              _buildToolbarItem('文字'),
-                              _buildToolbarItem('颜色'),
-                              _buildToolbarItem('显隐'),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ],
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // 模板选择器（当点击模板按钮时显示）
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            height: _showTemplateSelector ? 140 : 0,
+            child: _showTemplateSelector
+                ? _buildTemplatePickerInToolbar()
+                : const SizedBox.shrink(),
+          ),
+
+          // 颜色选择器（保持原有代码）
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            height: _showColorPicker ? 90 : 0, // 减小高度
+            child: _showColorPicker
+                ? _buildColorPicker()
+                : const SizedBox.shrink(),
+          ),
+
+          // 文字选择器
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            height: _showTextEditor ? 90 : 0,
+            child:
+                _showTextEditor ? _buildTextEditor() : const SizedBox.shrink(),
+          ),
+
+          // 工具栏
+          InkWell(
+            onTap: _toggleToolbar,
+            child: Container(
+              height: 40,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: Row(
+                children: [
+                  Transform.rotate(
+                    angle: _arrowRotationAnimation.value,
+                    child: Icon(
+                      _isToolbarExpanded
+                          ? Icons.keyboard_arrow_down
+                          : Icons.keyboard_arrow_up,
+                      size: 24,
+                      color: Colors.black87,
+                    ),
                   ),
-                ),
-              ),
-              // 工具栏内容
-              if (!_isToolbarExpanded)
-                ClipRect(
-                  child: Align(
-                    heightFactor: 1.0 - _toolbarSlideAnimation.value,
-                    child: Container(
-                      height: 48,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                  const SizedBox(width: 12),
+                  if (!_isToolbarExpanded)
+                    const Text(
+                      '样式编辑',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  if (_isToolbarExpanded) ...[
+                    Expanded(
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
@@ -596,12 +648,33 @@ class _CreateScreenState extends State<CreateScreen>
                         ],
                       ),
                     ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          // 工具栏内容
+          if (!_isToolbarExpanded)
+            ClipRect(
+              child: Align(
+                heightFactor: 1.0 - _toolbarSlideAnimation.value,
+                child: Container(
+                  height: 48,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildToolbarItem('模板'),
+                      _buildToolbarItem('文字'),
+                      _buildToolbarItem('颜色'),
+                      _buildToolbarItem('显隐'),
+                    ],
                   ),
                 ),
-            ],
-          ),
-        );
-      },
+              ),
+            ),
+        ],
+      ),
     );
   }
 
@@ -609,29 +682,72 @@ class _CreateScreenState extends State<CreateScreen>
   bool _showColorPicker = false;
 
   Widget _buildToolbarItem(String label) {
+    bool isSelected = false;
+    switch (label) {
+      case '模板':
+        isSelected = _showTemplateSelector;
+        break;
+      case '颜色':
+        isSelected = _showColorPicker;
+        break;
+      case '文字':
+        isSelected = _showTextEditor;
+        break;
+    }
+
     return GestureDetector(
-      onTapDown: (TapDownDetails details) {
-        switch (label) {
-          case '颜色':
-            setState(() {
-              _showColorPicker = !_showColorPicker;
-            });
-            break;
-          // TODO: 处理其他按钮点击事件
-        }
+      onTap: () {
+        // 使用 Future.microtask 来避免在构建过程中调用 setState
+        Future.microtask(() {
+          switch (label) {
+            case '模板':
+              setState(() {
+                _showTemplateSelector = !_showTemplateSelector;
+                _showColorPicker = false;
+                _showTextEditor = false;
+              });
+              break;
+            case '颜色':
+              setState(() {
+                _showColorPicker = !_showColorPicker;
+                _showTemplateSelector = false;
+                _showTextEditor = false;
+              });
+              break;
+            case '文字':
+              setState(() {
+                _showTextEditor = !_showTextEditor;
+                _showTemplateSelector = false;
+                _showColorPicker = false;
+              });
+              break;
+            case '显隐':
+              // 先关闭所有选择器
+              setState(() {
+                _showTemplateSelector = false;
+                _showColorPicker = false;
+                _showTextEditor = false;
+              });
+              // 然后显示透明度控制
+              _showOpacityControl();
+              break;
+          }
+        });
       },
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(8),
-          color: Colors.transparent,
+          color: isSelected ? Colors.grey.withOpacity(0.1) : Colors.transparent,
         ),
         child: Padding(
           padding: const EdgeInsets.all(8.0),
           child: Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
-              color: Colors.black87,
+              color: isSelected
+                  ? Theme.of(context).colorScheme.primary
+                  : Colors.black87,
             ),
           ),
         ),
@@ -652,34 +768,37 @@ class _CreateScreenState extends State<CreateScreen>
   }
 
   Widget _buildGradientColorButton(int index) {
-    if (index >= _gradientColors.length) return const SizedBox(width: 32);
+    if (index >= _gradientColors.length) return const SizedBox(width: 24);
 
     return GestureDetector(
       onTap: () {
         setState(() {
           _selectedGradientIndex = index;
         });
-        // TODO: 应用选中的渐变色
       },
       child: Container(
-        width: 32,
-        height: 32,
+        width: 24,
+        height: 24,
+        margin: const EdgeInsets.all(2),
         decoration: BoxDecoration(
-          shape: BoxShape.circle,
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: _gradientColors[index],
           ),
+          shape: BoxShape.circle,
           border: _selectedGradientIndex == index
-              ? Border.all(color: Colors.yellow, width: 2)
+              ? Border.all(
+                  color: Theme.of(context).colorScheme.primary,
+                  width: 2,
+                )
               : null,
         ),
       ),
     );
   }
 
-  // 添加页面切换方法
+  // 修改颜色页面切换方法
   void _toggleColorPage() {
     setState(() {
       _currentColorPage = _currentColorPage == 0 ? 1 : 0;
@@ -688,61 +807,92 @@ class _CreateScreenState extends State<CreateScreen>
 
   // 修改颜色选择器部分的代码
   Widget _buildColorPicker() {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // 渐变色按钮网格
-        Wrap(
-          alignment: WrapAlignment.spaceEvenly,
-          spacing: 8,
-          runSpacing: 8,
-          children: List.generate(8, (index) {
-            final colorIndex = _currentColorPage * 16 + index;
-            return _buildGradientColorButton(colorIndex);
-          }),
-        ),
-        const SizedBox(height: 16),
-        Wrap(
-          alignment: WrapAlignment.spaceEvenly,
-          spacing: 8,
-          runSpacing: 8,
-          children: List.generate(8, (index) {
-            final colorIndex = _currentColorPage * 16 + index + 8;
-            return _buildGradientColorButton(colorIndex);
-          }),
-        ),
-        const SizedBox(height: 16),
-        // 页面指示器和切换按钮
-        GestureDetector(
-          onTap: _toggleColorPage,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 16,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: _currentColorPage == 0
-                      ? Colors.yellow
-                      : Colors.grey.shade400,
-                  borderRadius: BorderRadius.circular(2),
-                ),
+    return SizedBox(
+      height: 90,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // 第一行渐变色按钮
+          Expanded(
+            flex: 1,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: List.generate(8, (index) {
+                  final colorIndex = _currentColorPage * 16 + index;
+                  return _buildGradientColorButton(colorIndex);
+                }),
               ),
-              const SizedBox(width: 4),
-              Container(
-                width: 16,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: _currentColorPage == 1
-                      ? Colors.yellow
-                      : Colors.grey.shade400,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
-      ],
+          // 第二行渐变色按钮
+          Expanded(
+            flex: 1,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: List.generate(8, (index) {
+                  final colorIndex = _currentColorPage * 16 + index + 8;
+                  return _buildGradientColorButton(colorIndex);
+                }),
+              ),
+            ),
+          ),
+          // 页面指示器和切换按钮
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4, top: 2),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // 添加切换页面按钮
+                GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _currentColorPage = _currentColorPage == 0 ? 1 : 0;
+                    });
+                  },
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 16,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: _currentColorPage == 0
+                                ? Theme.of(context).colorScheme.primary
+                                : Colors.grey.shade400,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Container(
+                          width: 16,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: _currentColorPage == 1
+                                ? Theme.of(context).colorScheme.primary
+                                : Colors.grey.shade400,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -822,222 +972,306 @@ class _CreateScreenState extends State<CreateScreen>
     );
   }
 
-  // 修改样式工具栏
-  Widget _buildStyleToolbar() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          // 模板按钮
-          InkWell(
-            onTap: _showTemplateSelector,
-            borderRadius: BorderRadius.circular(8),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.image,
-                    color: _currentMode == 'template'
-                        ? Theme.of(context).primaryColor
-                        : Colors.grey[600],
+  // 底部工具栏的小型模板选择器
+  Widget _buildTemplatePickerInToolbar() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: _templateImages.values
+                  .expand((images) => images)
+                  .toList()
+                  .asMap()
+                  .entries
+                  .map((entry) {
+                final imageUrl = entry.value;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _selectedBackgroundImage = imageUrl;
+                        _showTemplateSelector = false;
+                      });
+                    },
+                    child: Container(
+                      width: 60, // 更小的缩略图
+                      height: 90, // 保持宽高比
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: _selectedBackgroundImage == imageUrl
+                              ? Theme.of(context).colorScheme.primary
+                              : Colors.grey.withOpacity(0.2),
+                          width: 2,
+                        ),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: imageUrl != null
+                            ? Image.network(
+                                imageUrl,
+                                fit: BoxFit.cover,
+                                loadingBuilder:
+                                    (context, child, loadingProgress) {
+                                  if (loadingProgress == null) return child;
+                                  return const Center(
+                                    child: SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              )
+                            : Container(
+                                color: Colors.grey[200],
+                                child: const Icon(Icons.image, size: 20),
+                              ),
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '模板',
-                    style: TextStyle(
-                      color: _currentMode == 'template'
-                          ? Theme.of(context).primaryColor
-                          : Colors.grey[600],
-                      fontSize: 12,
+                );
+              }).toList(),
+            ),
+          ),
+        ),
+        // 滚动提示
+        Padding(
+          padding: const EdgeInsets.only(bottom: 4),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.swipe,
+                size: 14,
+                color: Colors.grey[600],
+              ),
+              const SizedBox(width: 4),
+              Text(
+                '左右滑动查看更多',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // 修改文字编辑器组件
+  Widget _buildTextEditor() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // 第一行：字体大小、颜色和字体选择
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  // 字体大小控制
+                  Icon(Icons.text_fields, size: 20, color: Colors.grey[600]),
+                  Expanded(
+                    flex: 2,
+                    child: Slider(
+                      value: _fontSize,
+                      min: 12.0,
+                      max: 32.0,
+                      divisions: 20,
+                      onChanged: (value) {
+                        setState(() {
+                          _fontSize = value;
+                        });
+                      },
+                    ),
+                  ),
+                  // 文字颜色选择
+                  Row(
+                    children: [
+                      _buildTextColorButton(Colors.black87),
+                      _buildTextColorButton(Colors.white),
+                      _buildTextColorButton(Colors.red),
+                      _buildTextColorButton(Colors.blue),
+                      _buildTextColorButton(Colors.green),
+                      _buildTextColorButton(Colors.yellow),
+                      _buildTextColorButton(Colors.purple),
+                      _buildTextColorButton(Colors.orange),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // 第二行：字体选择和对齐方式
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  // 字体选择下拉框
+                  Expanded(
+                    flex: 2,
+                    child: _buildFontSelector(),
+                  ),
+                  const SizedBox(width: 16),
+                  // 对齐方式
+                  Expanded(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        IconButton(
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          icon: Icon(
+                            Icons.format_align_left,
+                            size: 20,
+                            color: _textAlign == TextAlign.left
+                                ? Theme.of(context).colorScheme.primary
+                                : Colors.grey[600],
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _textAlign = TextAlign.left;
+                            });
+                          },
+                        ),
+                        IconButton(
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          icon: Icon(
+                            Icons.format_align_center,
+                            size: 20,
+                            color: _textAlign == TextAlign.center
+                                ? Theme.of(context).colorScheme.primary
+                                : Colors.grey[600],
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _textAlign = TextAlign.center;
+                            });
+                          },
+                        ),
+                        IconButton(
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          icon: Icon(
+                            Icons.format_align_right,
+                            size: 20,
+                            color: _textAlign == TextAlign.right
+                                ? Theme.of(context).colorScheme.primary
+                                : Colors.grey[600],
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _textAlign = TextAlign.right;
+                            });
+                          },
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
           ),
-          // 其他样式按钮...
         ],
       ),
     );
   }
 
-  // 修改模板图片显示部分
-  Widget _buildTemplatePreview() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return Stack(
-          fit: StackFit.expand,
-          children: [
-            // 背景层
-            if (_selectedGradientIndex >= 0)
-              Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: _gradientColors[_selectedGradientIndex],
-                  ),
-                ),
-              ),
-
-            // 模板图片层
-            if (_selectedBackgroundImage != null)
-              Positioned.fill(
-                child: InteractiveViewer(
-                  constrained: true,
-                  child: Opacity(
-                    opacity: _templateOpacity,
-                    child: Image.network(
-                      _selectedBackgroundImage!,
-                      fit: BoxFit.cover,
-                      frameBuilder:
-                          (context, child, frame, wasSynchronouslyLoaded) {
-                        if (frame == null) {
-                          return _buildLoadingPlaceholder();
-                        }
-                        return child;
-                      },
-                      errorBuilder: (context, error, stackTrace) {
-                        return _buildErrorPlaceholder();
-                      },
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        );
+  // 文字颜色选择按钮
+  Widget _buildTextColorButton(Color color) {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _textColor = color;
+        });
       },
-    );
-  }
-
-  // 添加占位符组件
-  Widget _buildLoadingPlaceholder() {
-    return Container(
-      color: Colors.grey[200],
-      child: const Center(
-        child: CircularProgressIndicator(),
-      ),
-    );
-  }
-
-  Widget _buildErrorPlaceholder() {
-    return Container(
-      color: Colors.grey[200],
-      child: Icon(
-        Icons.broken_image_outlined,
-        size: 48,
-        color: Colors.grey[400],
-      ),
-    );
-  }
-
-  // 修改模板选择器的实现
-  void _showTemplateSelector() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (BuildContext context) {
-        return SafeArea(
-          child: Padding(
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).viewInsets.bottom,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 标题栏
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.image, size: 24),
-                      const SizedBox(width: 12),
-                      Text(
-                        '选择模板',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey[800],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                // 模板网格
-                SizedBox(
-                  height: 240,
-                  child: GridView.builder(
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 4,
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                      childAspectRatio: 1,
-                    ),
-                    itemCount: _templateImages.values
-                        .expand((images) => images)
-                        .toList()
-                        .length,
-                    itemBuilder: (context, index) {
-                      final allImages = _templateImages.values
-                          .expand((images) => images)
-                          .toList();
-                      return Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () {
-                            setState(() {
-                              _selectedBackgroundImage = allImages[index];
-                            });
-                            Navigator.pop(context);
-                          },
-                          child: Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(8),
-                              image: DecorationImage(
-                                image: NetworkImage(allImages[index]),
-                                fit: BoxFit.cover,
-                              ),
-                              border:
-                                  _selectedBackgroundImage == allImages[index]
-                                      ? Border.all(
-                                          color: Theme.of(context).primaryColor,
-                                          width: 2,
-                                        )
-                                      : null,
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
-            ),
+      child: Container(
+        width: 24,
+        height: 24,
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: _textColor == color
+                ? Theme.of(context).colorScheme.primary
+                : Colors.grey.withOpacity(0.2),
+            width: 2,
           ),
-        );
-      },
+          // 为白色添加背景
+          boxShadow: color == Colors.white
+              ? [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.2),
+                    blurRadius: 2,
+                    spreadRadius: 1,
+                  ),
+                ]
+              : null,
+        ),
+      ),
+    );
+  }
+
+  // 修改字体选择下拉框
+  Widget _buildFontSelector() {
+    return Container(
+      height: 32,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.withOpacity(0.3)),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: DropdownButton<TextStyle?>(
+        value: _selectedFontStyle,
+        isExpanded: true,
+        underline: const SizedBox(),
+        style: TextStyle(
+          color: Colors.grey[800],
+          fontSize: 14,
+        ),
+        items: _fontFamilies.map((font) {
+          return DropdownMenuItem<TextStyle?>(
+            value: font['textStyle'],
+            child: Text(
+              font['name'],
+              style: font['textStyle']?.copyWith(
+                fontSize: 14,
+                color: Colors.grey[800],
+              ),
+            ),
+          );
+        }).toList(),
+        onChanged: (TextStyle? newStyle) {
+          setState(() {
+            _selectedFontStyle = newStyle;
+          });
+        },
+      ),
+    );
+  }
+
+  // 修改文本样式应用方式
+  TextStyle _getTextStyle() {
+    final baseStyle = _selectedFontStyle ?? const TextStyle();
+    return baseStyle.copyWith(
+      fontSize: _fontSize,
+      color: _textColor,
+      height: 1.5,
     );
   }
 }
