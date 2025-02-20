@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'dart:math' as math;
 import '../../services/unsplash_service.dart';
+import '../../services/template_naming_service.dart';
+import '../../common/theme/app_theme.dart';
 
 class WorksScreen extends StatefulWidget {
   const WorksScreen({Key? key}) : super(key: key);
@@ -12,8 +16,25 @@ class _WorksScreenState extends State<WorksScreen> {
   final UnsplashService _unsplashService = UnsplashService();
   bool _isSelectionMode = false;
   final Set<int> _selectedItems = <int>{};
-  List<String> _workImages = [];
+  List<Map<String, String>> _workItems = [];
   bool _isLoading = true;
+  String _selectedFilter = '全部';
+  final List<String> _filters = ['全部', '最近', '收藏', '已分享'];
+
+  final List<String> _categories = [
+    '照片',
+    '插画',
+    '壁纸',
+    '自然',
+    '3D',
+    '纹理',
+    '建筑',
+    '旅行',
+    '电影',
+    '街拍',
+    '人物',
+    '动物',
+  ];
 
   @override
   void initState() {
@@ -23,11 +44,33 @@ class _WorksScreenState extends State<WorksScreen> {
 
   Future<void> _loadWorkImages() async {
     try {
-      // 获取适合作品展示的图片
-      final images =
-          await _unsplashService.getImagesByCategory('creative portfolio');
+      List<Map<String, String>> items = [];
+      final random = math.Random();
+
+      for (int i = 0; i < 10; i++) {
+        final category = _categories[random.nextInt(_categories.length)];
+        final searchTerm =
+            _unsplashService.convertCategoryToSearchTerm(category);
+
+        final images = await _unsplashService.getImagesByCategory(
+          searchTerm,
+          size: 'small',
+          perPage: 1,
+          page: random.nextInt(5) + 1,
+        );
+
+        if (images.isNotEmpty) {
+          items.add({
+            'url': images.first,
+            'title': TemplateNamingService.generateName(category),
+            'category': category,
+            'date': '2024-03-${10 + i}',
+          });
+        }
+      }
+
       setState(() {
-        _workImages = images;
+        _workItems = items;
         _isLoading = false;
       });
     } catch (e) {
@@ -40,9 +83,15 @@ class _WorksScreenState extends State<WorksScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title:
-            Text(_isSelectionMode ? '已选择 ${_selectedItems.length} 项' : '我的作品'),
-        actions: _buildAppBarActions(),
+        title: const Text('我的作品'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.more_vert),
+            onPressed: () {
+              // TODO: 实现更多操作菜单
+            },
+          ),
+        ],
       ),
       body: CustomScrollView(
         slivers: [
@@ -60,290 +109,162 @@ class _WorksScreenState extends State<WorksScreen> {
             ),
           ),
 
-          // 作品分类标签
+          // 筛选条件
           SliverToBoxAdapter(
-            child: _buildCategoryTabs(),
-          ),
-
-          // 作品网格
-          SliverPadding(
-            padding: const EdgeInsets.all(16.0),
-            sliver: SliverGrid(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                mainAxisSpacing: 16.0,
-                crossAxisSpacing: 16.0,
-                childAspectRatio: 0.75,
-              ),
-              delegate: SliverChildBuilderDelegate(
-                (context, index) => _buildWorkItem(index),
-                childCount: 10, // 临时数量
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Row(
+                children:
+                    _filters.map((filter) => _buildFilterChip(filter)).toList(),
               ),
             ),
           ),
+
+          const SliverPadding(padding: EdgeInsets.only(top: 16)),
+
+          // 作品网格
+          SliverLayoutBuilder(
+            builder: (BuildContext context, SliverConstraints constraints) {
+              final double screenWidth = constraints.crossAxisExtent;
+              final int crossAxisCount =
+                  math.max(3, (screenWidth / 150).floor());
+
+              return SliverGrid(
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,
+                  mainAxisSpacing: 8.0,
+                  crossAxisSpacing: 8.0,
+                  childAspectRatio: 1.0,
+                ),
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) => _buildWorkCard(_workItems[index]),
+                  childCount: _workItems.length,
+                ),
+              );
+            },
+          ),
+
+          // 加载状态指示器
+          if (_isLoading)
+            const SliverToBoxAdapter(
+              child: Center(
+                child: CircularProgressIndicator(),
+              ),
+            ),
         ],
       ),
-      // 底部操作栏（选择模式时显示）
-      bottomNavigationBar: _isSelectionMode ? _buildSelectionToolbar() : null,
-      floatingActionButton: !_isSelectionMode
-          ? FloatingActionButton(
-              onPressed: () {
-                // TODO: 跳转到创建页面
-              },
-              child: const Icon(Icons.add),
-            )
-          : null,
     );
   }
 
-  List<Widget> _buildAppBarActions() {
-    if (_isSelectionMode) {
-      return [
-        TextButton(
-          onPressed: () {
-            setState(() {
-              if (_selectedItems.length == 10) {
-                _selectedItems.clear();
-              } else {
-                _selectedItems.addAll(List<int>.generate(10, (i) => i));
-              }
-            });
-          },
-          child: Text(_selectedItems.length == 10 ? '取消全选' : '全选'),
-        ),
-        IconButton(
-          icon: const Icon(Icons.close),
-          onPressed: () {
-            setState(() {
-              _isSelectionMode = false;
-              _selectedItems.clear();
-            });
-          },
-        ),
-      ];
-    }
-    return [
-      IconButton(
-        icon: const Icon(Icons.more_vert),
-        onPressed: () {
+  Widget _buildFilterChip(String filter) {
+    final isSelected = _selectedFilter == filter;
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: FilterChip(
+        label: Text(filter),
+        selected: isSelected,
+        onSelected: (bool selected) {
           setState(() {
-            _isSelectionMode = true;
+            _selectedFilter = filter;
+            // TODO: 根据筛选条件加载作品
           });
         },
       ),
-    ];
-  }
-
-  Widget _buildCategoryTabs() {
-    final categories = ['全部', '最近', '收藏', '已分享'];
-
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: Row(
-        children: categories.map((category) {
-          return Padding(
-            padding: const EdgeInsets.only(right: 8.0),
-            child: FilterChip(
-              label: Text(category),
-              selected: category == '全部', // 临时状态
-              onSelected: (selected) {
-                // TODO: 实现分类筛选
-              },
-            ),
-          );
-        }).toList(),
-      ),
     );
   }
 
-  Widget _buildWorkItem(int index) {
+  Widget _buildWorkCard(Map<String, String> workItem) {
     return Card(
       clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Stack(
+        fit: StackFit.expand,
         children: [
-          InkWell(
-            onTap: _isSelectionMode
-                ? () {
-                    setState(() {
-                      if (_selectedItems.contains(index)) {
-                        _selectedItems.remove(index);
-                      } else {
-                        _selectedItems.add(index);
-                      }
-                    });
-                  }
-                : () {
-                    // TODO: 查看作品详情
-                  },
-            onLongPress: !_isSelectionMode
-                ? () {
-                    setState(() {
-                      _isSelectionMode = true;
-                      _selectedItems.add(index);
-                    });
-                  }
-                : null,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 作品预览图
-                Expanded(
-                  child: _workImages.isEmpty
-                      ? Container(
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade200,
-                          ),
-                          child: Center(
-                            child: Icon(
-                              Icons.image_outlined,
-                              size: 32,
-                              color: Colors.grey.shade400,
-                            ),
-                          ),
-                        )
-                      : Image.network(
-                          _workImages[index % _workImages.length],
-                          fit: BoxFit.cover,
-                          loadingBuilder: (context, child, loadingProgress) {
-                            if (loadingProgress == null) return child;
-                            return Container(
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade200,
-                              ),
-                              child: const Center(
-                                child: CircularProgressIndicator(),
-                              ),
-                            );
-                          },
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade200,
-                              ),
-                              child: Center(
-                                child: Icon(
-                                  Icons.broken_image_outlined,
-                                  size: 32,
-                                  color: Colors.grey.shade400,
-                                ),
-                              ),
-                            );
-                          },
-                        ),
+          // 作品图片
+          Image.network(
+            workItem['url']!,
+            fit: BoxFit.cover,
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) return child;
+              return Center(child: CircularProgressIndicator());
+            },
+          ),
+
+          // 渐变遮罩
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withOpacity(0.7),
+                  ],
                 ),
-                // 作品信息
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '作品标题 ${index + 1}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '创建于 2024-03-${index + 10}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                    ],
+              ),
+              padding: const EdgeInsets.all(8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    workItem['title']!,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
+                  Text(
+                    '创建于 ${workItem['date']}',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.8),
+                      fontSize: 10,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // 操作按钮
+          Positioned(
+            top: 8,
+            right: 8,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildActionButton(Icons.favorite_border),
+                const SizedBox(width: 8),
+                _buildActionButton(Icons.share),
               ],
             ),
           ),
-          if (_isSelectionMode)
-            Positioned(
-              right: 8,
-              top: 8,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: _selectedItems.contains(index)
-                      ? Theme.of(context).colorScheme.primary
-                      : Colors.grey.withOpacity(0.5),
-                  shape: BoxShape.circle,
-                ),
-                padding: const EdgeInsets.all(2),
-                child: Icon(
-                  Icons.check,
-                  size: 20,
-                  color: _selectedItems.contains(index)
-                      ? Colors.white
-                      : Colors.transparent,
-                ),
-              ),
-            ),
         ],
       ),
     );
   }
 
-  Widget _buildSelectionToolbar() {
-    return BottomAppBar(
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _buildToolbarButton(
-            icon: Icons.share,
-            label: '分享',
-            onTap: () {
-              // TODO: 实现分享功能
-            },
-          ),
-          _buildToolbarButton(
-            icon: Icons.delete_outline,
-            label: '删除',
-            onTap: () {
-              // TODO: 实现删除功能
-            },
-          ),
-          _buildToolbarButton(
-            icon: Icons.folder_outlined,
-            label: '移动',
-            onTap: () {
-              // TODO: 实现移动功能
-            },
-          ),
-          _buildToolbarButton(
-            icon: Icons.more_horiz,
-            label: '更多',
-            onTap: () {
-              // TODO: 显示更多选项
-            },
-          ),
-        ],
+  Widget _buildActionButton(IconData icon) {
+    return Container(
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.3),
+        shape: BoxShape.circle,
       ),
-    );
-  }
-
-  Widget _buildToolbarButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: const TextStyle(fontSize: 12),
-            ),
-          ],
-        ),
+      child: Icon(
+        icon,
+        color: Colors.white,
+        size: 18,
       ),
     );
   }

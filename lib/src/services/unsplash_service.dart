@@ -8,9 +8,9 @@ class UnsplashService {
 
   Future<List<String>> getImagesByCategory(
     String query, {
-    String size = 'regular',
+    String size = 'small',
     int page = 1,
-    int perPage = 10,
+    int perPage = 30,
   }) async {
     try {
       final response = await http.get(
@@ -25,7 +25,7 @@ class UnsplashService {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final results = data['results'] as List;
-        
+
         return results.map<String>((photo) {
           return photo['urls'][size] as String;
         }).toList();
@@ -42,6 +42,7 @@ class UnsplashService {
   String convertCategoryToSearchTerm(String category) {
     // 中文分类映射到英文搜索关键词
     final Map<String, String> categoryMapping = {
+      '全部': 'creative templates',
       '照片': 'photos',
       '插画': 'illustrations',
       '壁纸': 'wallpapers',
@@ -54,11 +55,7 @@ class UnsplashService {
       '街拍': 'street photography',
       '人物': 'people',
       '动物': 'animals',
-      '实验': 'experimental',
-      '时尚': 'fashion & beauty',
-      '美食': 'food & drink',
-      '运动': 'sports',
-      '健康': 'health & wellness',
+      '其他': 'miscellaneous',
     };
 
     return categoryMapping[category] ?? category;

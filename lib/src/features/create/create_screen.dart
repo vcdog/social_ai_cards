@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'dart:math' as math;
 import '../../services/unsplash_service.dart';
-import 'dart:math';
 import 'package:google_fonts/google_fonts.dart';
+import '../../services/template_naming_service.dart';
 
 class CreateScreen extends StatefulWidget {
   const CreateScreen({Key? key}) : super(key: key);
@@ -16,44 +18,52 @@ class _CreateScreenState extends State<CreateScreen>
   String _currentMode = 'template'; // template, edit, preview
   final UnsplashService _unsplashService = UnsplashService();
   String? _selectedBackgroundImage; // 添加选中的背景图片变量
-  final List<Map<String, dynamic>> _templates = [
-    {'category': '照片', 'title': '精选照片', 'searchTerm': 'photos'},
-    {'category': '插画', 'title': '创意插画', 'searchTerm': 'illustrations'},
-    {'category': '壁纸', 'title': '高清壁纸', 'searchTerm': 'wallpapers'},
-    {'category': '自然', 'title': '自然风光', 'searchTerm': 'nature'},
-    {'category': '3D', 'title': '3D渲染', 'searchTerm': '3d renders'},
-    {'category': '纹理', 'title': '材质纹理', 'searchTerm': 'textures'},
-    {'category': '建筑', 'title': '建筑空间', 'searchTerm': 'architecture & interiors'},
-    {'category': '旅行', 'title': '旅行风景', 'searchTerm': 'travel'},
-    {'category': '电影', 'title': '电影场景', 'searchTerm': 'film'},
-    {'category': '街拍', 'title': '街头摄影', 'searchTerm': 'street photography'},
-    {'category': '人物', 'title': '人物写真', 'searchTerm': 'people'},
-    {'category': '动物', 'title': '动物世界', 'searchTerm': 'animals'},
-    {'category': '实验', 'title': '实验创意', 'searchTerm': 'experimental'},
-    {'category': '时尚', 'title': '时尚美妆', 'searchTerm': 'fashion & beauty'},
-    {'category': '美食', 'title': '美食佳肴', 'searchTerm': 'food & drink'},
-    {'category': '运动', 'title': '体育运动', 'searchTerm': 'sports'},
-    {'category': '健康', 'title': '健康生活', 'searchTerm': 'health & wellness'},
+  String _selectedCategory = '全部'; // 修改默认选中分类为"全部"
+
+  // 分页和加载相关变量
+  final Map<String, List<Map<String, String>>> _templateImages = {};
+  final Map<String, int> _currentPage = {};
+  final Map<String, bool> _hasMore = {};
+  final Map<String, bool> _isLoadingMore = {}; // 只保留这一个 _isLoadingMore 声明
+  static const int _perPage = 10;
+
+  // 滚动控制器
+  final ScrollController _scrollController = ScrollController();
+  late TextEditingController _textController;
+  late AnimationController _toolbarAnimController;
+  late Animation<double> _arrowRotationAnimation;
+
+  // 修改模板分类列表
+  final List<Map<String, String>> _templates = [
+    {'category': '全部', 'searchTerm': 'creative templates'},
+    {'category': '照片', 'searchTerm': 'photos'},
+    {'category': '插画', 'searchTerm': 'illustrations'},
+    {'category': '壁纸', 'searchTerm': 'wallpapers'},
+    {'category': '自然', 'searchTerm': 'nature'},
+    {'category': '3D', 'searchTerm': '3d renders'},
+    {'category': '纹理', 'searchTerm': 'textures'},
+    {'category': '建筑', 'searchTerm': 'architecture & interiors'},
+    {'category': '旅行', 'searchTerm': 'travel'},
+    {'category': '电影', 'searchTerm': 'film'},
+    {'category': '街拍', 'searchTerm': 'street photography'},
+    {'category': '人物', 'searchTerm': 'people'},
+    {'category': '动物', 'searchTerm': 'animals'},
+    {'category': '其他', 'searchTerm': 'miscellaneous'},
   ];
 
-  Map<String, List<String>> _templateImages = {};
-  bool _isLoading = true;
   // 添加文本编辑相关变量
-  final TextEditingController _textController = TextEditingController();
   bool _isEditing = false;
   String _editingText = '在此处添加文本';
-  double _fontSize = 16.0;  // 用这个作为字体大小的控制变量
+  double _fontSize = 16.0; // 用这个作为字体大小的控制变量
   Color _textColor = Colors.black87;
-  TextAlign _textAlign = TextAlign.center;  // 添加文本对齐方式变量
+  TextAlign _textAlign = TextAlign.center; // 添加文本对齐方式变量
 
   // 添加工具栏展开状态控制
   bool _isToolbarExpanded = false;
-  late AnimationController _toolbarAnimController;
   late Animation<double> _toolbarSlideAnimation;
-  late Animation<double> _arrowRotationAnimation;
 
   // 添加工具栏选中项状态
-  String? _selectedToolbarItem;  // 当前选中的工具栏项
+  String? _selectedToolbarItem; // 当前选中的工具栏项
 
   // 修改渐变色列表，完善第二页的深色系颜色
   final List<List<Color>> _gradientColors = [
@@ -137,93 +147,102 @@ class _CreateScreenState extends State<CreateScreen>
   ];
   TextStyle? _selectedFontStyle;
 
-  // 添加分页加载相关变量
-  final Map<String, int> _currentPage = {};
-  final Map<String, bool> _hasMore = {};
-  final Map<String, bool> _isLoadingMore = {};
-  static const int _perPage = 10;
-
   @override
   void initState() {
     super.initState();
-    _loadTemplateImages();
-
-    // 初始化动画控制器
+    _textController = TextEditingController();
     _toolbarAnimController = AnimationController(
-      duration: const Duration(milliseconds: 300),
       vsync: this,
+      duration: const Duration(milliseconds: 200),
     );
 
-    // 工具栏滑动动画
-    _toolbarSlideAnimation = Tween<double>(
-      begin: 1.0,
-      end: 0.0,
-    ).animate(CurvedAnimation(
-      parent: _toolbarAnimController,
-      curve: Curves.easeInOut,
-    ));
+    // 添加滚动监听
+    _scrollController.addListener(_onScroll);
 
-    // 箭头旋转动画
-    _arrowRotationAnimation = Tween<double>(
-      begin: 0,
-      end: 3.14159, // 180度（π弧度）
-    ).animate(CurvedAnimation(
-      parent: _toolbarAnimController,
-      curve: Curves.easeInOut,
-    ));
+    // 初始加载图片
+    _loadTemplateImages(_selectedCategory);
   }
 
   @override
   void dispose() {
     _textController.dispose();
     _toolbarAnimController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
-  Future<void> _loadTemplateImages([String? category]) async {
+  // 滚动监听处理
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      _loadMoreImages();
+    }
+  }
+
+  // 加载更多图片
+  Future<void> _loadMoreImages() async {
+    final category = _selectedCategory;
+    if (!(_isLoadingMore[category] ?? false)) {
+      setState(() {
+        _isLoadingMore[category] = true;
+      });
+      await _loadTemplateImages(category, loadMore: true);
+      setState(() {
+        _isLoadingMore[category] = false;
+      });
+    }
+  }
+
+  // 加载模板图片
+  Future<void> _loadTemplateImages(String category,
+      {bool loadMore = false}) async {
     try {
-      if (category != null) {
-        if (_isLoadingMore[category] == true) return;
-        
-        final template = _templates.firstWhere((t) => t['category'] == category);
-        final currentPage = _currentPage[category] ?? 1;
-        
-        setState(() => _isLoadingMore[category] = true);
-        
-        final images = await _unsplashService.getImagesByCategory(
-          template['searchTerm'],
-          size: 'regular',
+      if (_isLoadingMore[category] ?? false) return;
+
+      final currentPage = loadMore ? (_currentPage[category] ?? 1) + 1 : 1;
+
+      List<String> images;
+      if (category == '全部') {
+        images = await _unsplashService.getImagesByCategory(
+          'creative templates',
+          size: 'small',
           page: currentPage,
           perPage: _perPage,
         );
-
-        if (images.isEmpty) {
-          _hasMore[category] = false;
-        } else {
-          setState(() {
-            if (_templateImages[category] == null) {
-              _templateImages[category] = [];
-            }
-            _templateImages[category]!.addAll(images);
-            _currentPage[category] = currentPage + 1;
-          });
-        }
-        
-        setState(() => _isLoadingMore[category] = false);
       } else {
-        // 初始加载所有分类的第一页
-        for (var template in _templates) {
-          final category = template['category'];
-          _currentPage[category] = 1;
-          _hasMore[category] = true;
-          await _loadTemplateImages(category);
-        }
+        final searchTerm = _templates
+            .firstWhere((t) => t['category'] == category)['searchTerm']!;
+        images = await _unsplashService.getImagesByCategory(
+          searchTerm,
+          size: 'small',
+          page: currentPage,
+          perPage: _perPage,
+        );
+      }
+
+      if (images.isNotEmpty) {
+        setState(() {
+          if (!loadMore) {
+            _templateImages[category] = [];
+          }
+          final namedImages = images
+              .map((url) => {
+                    'url': url,
+                    'name': TemplateNamingService.generateName(category),
+                  })
+              .toList();
+
+          _templateImages[category] ??= [];
+          _templateImages[category]!.addAll(namedImages);
+          _currentPage[category] = currentPage;
+        });
       }
     } catch (e) {
       print('Error loading template images: $e');
-      if (category != null) {
-        setState(() => _isLoadingMore[category] = false);
-      }
+    } finally {
+      setState(() {
+        _isLoadingMore[category] = false;
+      });
     }
   }
 
@@ -325,73 +344,143 @@ class _CreateScreenState extends State<CreateScreen>
 
   Widget _buildTemplateSelector() {
     return Column(
-      mainAxisSize: MainAxisSize.min,
       children: [
+        // 添加分类选择器
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Row(
+            children: _templates
+                .map((template) => Padding(
+                      padding: const EdgeInsets.only(right: 8.0),
+                      child: FilterChip(
+                        label: Text(template['category']!),
+                        selected: _selectedCategory == template['category'],
+                        onSelected: (bool selected) {
+                          setState(() {
+                            _selectedCategory = template['category']!;
+                            _loadTemplateImages(_selectedCategory);
+                          });
+                        },
+                      ),
+                    ))
+                .toList(),
+          ),
+        ),
+        const SizedBox(height: 16),
+        // 模板网格部分
         Expanded(
-          child: GridView.builder(
-            padding: const EdgeInsets.all(16),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2, // 每行2个模板
-              mainAxisSpacing: 16,
-              crossAxisSpacing: 16,
-              childAspectRatio: 0.75, // 长宽比
-            ),
-            itemCount: _templateImages.values
-                .expand((images) => images)
-                .toList()
-                .length,
-            itemBuilder: (context, index) {
-              final images =
-                  _templateImages.values.expand((images) => images).toList();
-              final imageUrl = images.isNotEmpty ? images[index] : null;
+          child: CustomScrollView(
+            controller: _scrollController, // 添加滚动控制器
+            slivers: [
+              SliverLayoutBuilder(
+                builder: (BuildContext context, SliverConstraints constraints) {
+                  final double screenWidth = constraints.crossAxisExtent;
+                  final int crossAxisCount =
+                      math.max(3, (screenWidth / 150).floor());
 
-              return GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _selectedBackgroundImage = imageUrl;
-                    _currentMode = 'edit'; // 选择后自动切换到编辑模式
-                  });
+                  return SliverGrid(
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: crossAxisCount,
+                      mainAxisSpacing: 8.0,
+                      crossAxisSpacing: 8.0,
+                      childAspectRatio: 1.0,
+                    ),
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final imageData =
+                            _templateImages[_selectedCategory]?[index];
+                        if (imageData == null) {
+                          return const SizedBox();
+                        }
+                        return _buildTemplateCard(imageData);
+                      },
+                      childCount:
+                          _templateImages[_selectedCategory]?.length ?? 0,
+                    ),
+                  );
                 },
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: _selectedBackgroundImage == imageUrl
-                          ? Theme.of(context).colorScheme.primary
-                          : Colors.grey.withOpacity(0.2),
-                      width: 2,
+              ),
+              // 修改加载更多指示器的条件判断
+              if (_isLoadingMore[_selectedCategory] ?? false)
+                const SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.all(8.0),
+                    child: Center(
+                      child: CircularProgressIndicator(),
                     ),
                   ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: imageUrl != null
-                        ? Image.network(
-                            imageUrl,
-                            fit: BoxFit.cover,
-                            loadingBuilder: (context, child, loadingProgress) {
-                              if (loadingProgress == null) return child;
-                              return const Center(
-                                child: SizedBox(
-                                  width: 24,
-                                  height: 24,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                ),
-                              );
-                            },
-                          )
-                        : Container(
-                            color: Colors.grey[200],
-                            child: const Icon(Icons.image, size: 32),
-                          ),
-                  ),
                 ),
-              );
-            },
+            ],
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildTemplateCard(Map<String, String> imageData) {
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // 图片
+          Image.network(
+            imageData['url']!,
+            fit: BoxFit.cover,
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) return child;
+              return const Center(child: CircularProgressIndicator());
+            },
+          ),
+
+          // 渐变遮罩
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withOpacity(0.7),
+                  ],
+                ),
+              ),
+              padding: const EdgeInsets.all(8),
+              child: Text(
+                imageData['name'] ?? '未命名模板',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+
+          // 点击效果
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                setState(() {
+                  _selectedBackgroundImage = imageData['url'];
+                  _currentMode = 'edit';
+                });
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -658,8 +747,8 @@ class _CreateScreenState extends State<CreateScreen>
                           Transform.rotate(
                             angle: _arrowRotationAnimation.value,
                             child: Icon(
-                              _isToolbarExpanded 
-                                  ? Icons.keyboard_arrow_down 
+                              _isToolbarExpanded
+                                  ? Icons.keyboard_arrow_down
                                   : Icons.keyboard_arrow_up,
                               size: 24,
                               color: Colors.black87,
@@ -735,7 +824,7 @@ class _CreateScreenState extends State<CreateScreen>
   // 修改工具栏项构建方法
   Widget _buildToolbarItem(String label) {
     final isSelected = _selectedToolbarItem == label;
-    
+
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -745,7 +834,7 @@ class _CreateScreenState extends State<CreateScreen>
             _showTextEditor = false;
             return;
           }
-          
+
           _selectedToolbarItem = label;
           switch (label) {
             case '文字':
@@ -971,13 +1060,13 @@ class _CreateScreenState extends State<CreateScreen>
                   .asMap()
                   .entries
                   .map((entry) {
-                final imageUrl = entry.value;
+                final imageData = entry.value;
                 return Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: GestureDetector(
                     onTap: () {
                       setState(() {
-                        _selectedBackgroundImage = imageUrl;
+                        _selectedBackgroundImage = imageData['url'];
                         _showTemplateSelector = false;
                       });
                     },
@@ -987,7 +1076,7 @@ class _CreateScreenState extends State<CreateScreen>
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                          color: _selectedBackgroundImage == imageUrl
+                          color: _selectedBackgroundImage == imageData['url']
                               ? Theme.of(context).colorScheme.primary
                               : Colors.grey.withOpacity(0.2),
                           width: 2,
@@ -995,9 +1084,9 @@ class _CreateScreenState extends State<CreateScreen>
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(6),
-                        child: imageUrl != null
+                        child: imageData != null
                             ? Image.network(
-                                imageUrl,
+                                imageData['url']!,
                                 fit: BoxFit.cover,
                                 loadingBuilder:
                                     (context, child, loadingProgress) {
@@ -1106,13 +1195,14 @@ class _CreateScreenState extends State<CreateScreen>
                 children: [
                   // 字体选择下拉框 - 减小宽度
                   Expanded(
-                    flex: 2,  // 从 3 改回 2，减小宽度
+                    flex: 2, // 从 3 改回 2，减小宽度
                     child: _buildFontSelector(),
                   ),
-                  const SizedBox(width: 24),  // 增加间距
+                  const SizedBox(width: 24), // 增加间距
                   // 对齐方式按钮组 - 向左对齐
-                  Row(  // 移除 Expanded，使用普通 Row
-                    mainAxisSize: MainAxisSize.min,  // 让按钮组宽度自适应
+                  Row(
+                    // 移除 Expanded，使用普通 Row
+                    mainAxisSize: MainAxisSize.min, // 让按钮组宽度自适应
                     children: [
                       IconButton(
                         padding: EdgeInsets.zero,
@@ -1124,9 +1214,10 @@ class _CreateScreenState extends State<CreateScreen>
                               ? Theme.of(context).colorScheme.primary
                               : Colors.grey[600],
                         ),
-                        onPressed: () => setState(() => _textAlign = TextAlign.left),
+                        onPressed: () =>
+                            setState(() => _textAlign = TextAlign.left),
                       ),
-                      const SizedBox(width: 16),  // 按钮之间的间距
+                      const SizedBox(width: 16), // 按钮之间的间距
                       IconButton(
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),
@@ -1137,9 +1228,10 @@ class _CreateScreenState extends State<CreateScreen>
                               ? Theme.of(context).colorScheme.primary
                               : Colors.grey[600],
                         ),
-                        onPressed: () => setState(() => _textAlign = TextAlign.center),
+                        onPressed: () =>
+                            setState(() => _textAlign = TextAlign.center),
                       ),
-                      const SizedBox(width: 16),  // 按钮之间的间距
+                      const SizedBox(width: 16), // 按钮之间的间距
                       IconButton(
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),
@@ -1150,11 +1242,12 @@ class _CreateScreenState extends State<CreateScreen>
                               ? Theme.of(context).colorScheme.primary
                               : Colors.grey[600],
                         ),
-                        onPressed: () => setState(() => _textAlign = TextAlign.right),
+                        onPressed: () =>
+                            setState(() => _textAlign = TextAlign.right),
                       ),
                     ],
                   ),
-                  const Spacer(),  // 添加 Spacer 让按钮组靠左
+                  const Spacer(), // 添加 Spacer 让按钮组靠左
                 ],
               ),
             ),
@@ -1254,10 +1347,10 @@ class _CreateScreenState extends State<CreateScreen>
       _isToolbarExpanded = !_isToolbarExpanded;
       if (_isToolbarExpanded) {
         _toolbarAnimController.reverse();
-        _selectedToolbarItem = '模板';  // 默认选中模板
+        _selectedToolbarItem = '模板'; // 默认选中模板
       } else {
         _toolbarAnimController.forward();
-        _selectedToolbarItem = null;  // 清除选中状态
+        _selectedToolbarItem = null; // 清除选中状态
       }
     });
   }
@@ -1265,10 +1358,10 @@ class _CreateScreenState extends State<CreateScreen>
   // 添加渐变色按钮构建方法
   Widget _buildGradientColorButton(int index) {
     if (index >= _gradientColors.length) return const SizedBox();
-    
+
     final isSelected = _selectedGradientIndex == index;
     final gradientColors = _gradientColors[index];
-    
+
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -1289,8 +1382,8 @@ class _CreateScreenState extends State<CreateScreen>
           ),
           shape: BoxShape.circle,
           border: Border.all(
-            color: isSelected 
-                ? Theme.of(context).colorScheme.primary 
+            color: isSelected
+                ? Theme.of(context).colorScheme.primary
                 : Colors.grey.withOpacity(0.2),
             width: 2,
           ),
