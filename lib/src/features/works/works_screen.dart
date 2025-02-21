@@ -44,39 +44,61 @@ class _WorksScreenState extends State<WorksScreen> {
 
   Future<void> _loadWorkImages() async {
     try {
-      List<Map<String, String>> items = [];
-      final random = math.Random();
+      setState(() => _isLoading = true);
 
-      for (int i = 0; i < 10; i++) {
-        final category = _categories[random.nextInt(_categories.length)];
+      // 1. 随机选择2-3个分类
+      final random = math.Random();
+      final selectedCategories = List<String>.from(_categories)
+        ..shuffle(random);
+      final categoriesToUse = selectedCategories.take(3).toList();
+
+      // 2. 并行请求多个分类的图片
+      final futures = categoriesToUse.map((category) {
         final searchTerm =
             _unsplashService.convertCategoryToSearchTerm(category);
+        // 每个分类一次性请求5张图片，以确保有足够的图片可选
+        return _unsplashService
+            .getImagesByCategory(
+              searchTerm,
+              size: 'small',
+              perPage: 5, // 增加每个分类的图片数量
+              page: 1,
+            )
+            .then((images) => images
+                .map((url) => {
+                      'url': url,
+                      'title': TemplateNamingService.generateName(category),
+                      'category': category,
+                      'date': _generateRandomRecentDate(),
+                    })
+                .toList());
+      });
 
-        final images = await _unsplashService.getImagesByCategory(
-          searchTerm,
-          size: 'small',
-          perPage: 1,
-          page: random.nextInt(5) + 1,
-        );
+      // 3. 等待所有请求完成
+      final results = await Future.wait(futures);
 
-        if (images.isNotEmpty) {
-          items.add({
-            'url': images.first,
-            'title': TemplateNamingService.generateName(category),
-            'category': category,
-            'date': '2024-03-${10 + i}',
-          });
-        }
-      }
+      // 4. 合并结果并随机选择12张（原来是10张）
+      final allItems = results.expand((items) => items).toList()
+        ..shuffle(random);
+      final selectedItems = allItems.take(12).toList(); // 修改为12张
 
       setState(() {
-        _workItems = items;
+        _workItems = selectedItems;
         _isLoading = false;
       });
     } catch (e) {
       print('Error loading work images: $e');
       setState(() => _isLoading = false);
     }
+  }
+
+  // 生成最近30天内的随机日期
+  String _generateRandomRecentDate() {
+    final random = math.Random();
+    final now = DateTime.now();
+    final daysAgo = random.nextInt(30); // 0-29天前
+    final date = now.subtract(Duration(days: daysAgo));
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -93,6 +115,19 @@ class _WorksScreenState extends State<WorksScreen> {
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          // 导航到创建页面
+          Navigator.pushNamed(context, '/create');
+        },
+        backgroundColor: Theme.of(context).primaryColor,
+        child: const Icon(
+          Icons.add_rounded,
+          color: Colors.white,
+          size: 28,
+        ),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: CustomScrollView(
         slivers: [
           // 搜索栏

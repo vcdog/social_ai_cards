@@ -23,6 +23,34 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Map<String, String>> _inspirationImages = [];
   bool _isLoading = true;
 
+  // 定义快捷功能项
+  final List<Map<String, dynamic>> _shortcutItems = [
+    {
+      'icon': Icons.add_photo_alternate_rounded,
+      'label': '创建卡片',
+      'color': const Color(0xFF4A90E2),
+      'route': '/create',
+    },
+    {
+      'icon': Icons.style_rounded,
+      'label': '浏览模板',
+      'color': const Color(0xFF50C878),
+      'route': '/templates',
+    },
+    {
+      'icon': Icons.lightbulb_rounded,
+      'label': '获取灵感',
+      'color': const Color(0xFFFFA726),
+      'route': '/inspiration',
+    },
+    {
+      'icon': Icons.favorite_rounded,
+      'label': '我的收藏',
+      'color': const Color(0xFFE57373),
+      'route': '/favorites',
+    },
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -105,47 +133,7 @@ class _HomeScreenState extends State<HomeScreen> {
         slivers: [
           // 快捷功能区域
           SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    '快捷功能',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      ShortcutButton(
-                        icon: Icons.add_photo_alternate,
-                        label: '创建卡片',
-                        onTap: () => context.push('/create'),
-                      ),
-                      ShortcutButton(
-                        icon: Icons.style,
-                        label: '浏览模板',
-                        onTap: () => context.push('/templates'),
-                      ),
-                      ShortcutButton(
-                        icon: Icons.lightbulb_outline,
-                        label: '获取灵感',
-                        onTap: () => context.push('/inspiration'),
-                      ),
-                      ShortcutButton(
-                        icon: Icons.favorite,
-                        label: '我的收藏',
-                        onTap: () => context.push('/favorites'),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
+            child: _buildShortcutsSection(),
           ),
 
           // 推荐模板区域
@@ -181,6 +169,104 @@ class _HomeScreenState extends State<HomeScreen> {
                   _buildAdaptiveGrid(_inspirationImages),
                 ],
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 构建快捷功能区
+  Widget _buildShortcutsSection() {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 添加回标题
+          const Text(
+            '快捷功能',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 16),
+          // 快捷功能图标行
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children:
+                _shortcutItems.map((item) => _buildShortcutItem(item)).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 修改快捷功能项的点击处理
+  Widget _buildShortcutItem(Map<String, dynamic> item) {
+    return GestureDetector(
+      onTap: () => context.push(item['route']), // 使用 go_router 进行导航
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: item['color'].withOpacity(0.1),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: item['color'].withOpacity(0.2),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Material(
+              // 添加 Material widget 以支持水波纹效果
+              color: Colors.transparent,
+              child: Stack(
+                children: [
+                  // 背景装饰
+                  Positioned(
+                    right: -10,
+                    bottom: -10,
+                    child: Icon(
+                      item['icon'],
+                      size: 40,
+                      color: item['color'].withOpacity(0.2),
+                    ),
+                  ),
+                  // 主图标
+                  Center(
+                    child: Icon(
+                      item['icon'],
+                      size: 28,
+                      color: item['color'],
+                    ),
+                  ),
+                  // 添加水波纹效果
+                  Positioned.fill(
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: () => context.push(item['route']),
+                      splashColor: item['color'].withOpacity(0.3),
+                      highlightColor: item['color'].withOpacity(0.1),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            item['label'],
+            style: const TextStyle(
+              fontSize: 12,
+              color: Colors.black87,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],
