@@ -153,8 +153,17 @@ class _CreateScreenState extends State<CreateScreen>
     _textController = TextEditingController();
     _toolbarAnimController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 200),
+      duration: const Duration(milliseconds: 300),
     );
+
+    // 初始化箭头旋转动画
+    _arrowRotationAnimation = Tween<double>(
+      begin: 0,
+      end: math.pi,
+    ).animate(CurvedAnimation(
+      parent: _toolbarAnimController,
+      curve: Curves.easeInOut,
+    ));
 
     // 添加滚动监听
     _scrollController.addListener(_onScroll);
@@ -825,47 +834,46 @@ class _CreateScreenState extends State<CreateScreen>
   Widget _buildToolbarItem(String label) {
     final isSelected = _selectedToolbarItem == label;
 
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          if (_selectedToolbarItem == label) {
-            _selectedToolbarItem = null;
-            _showTemplateSelector = false;
-            _showTextEditor = false;
-            return;
-          }
+    // 根据标签选择对应的图标
+    IconData getIconForLabel() {
+      switch (label) {
+        case '模板':
+          return Icons.grid_view_rounded;
+        case '文字':
+          return Icons.text_format_rounded;
+        case '颜色':
+          return Icons.palette_rounded;
+        case '显隐':
+          return Icons.layers_rounded;
+        default:
+          return Icons.settings_rounded;
+      }
+    }
 
-          _selectedToolbarItem = label;
-          switch (label) {
-            case '文字':
-              _showTextEditor = true;
-              _showTemplateSelector = false;
-              break;
-            case '模板':
-              _showTemplateSelector = true;
-              _showTextEditor = false;
-              break;
-            case '颜色':
-              _showTemplateSelector = false;
-              _showTextEditor = false;
-              break;
-            case '显隐':
-              _showTemplateSelector = false;
-              _showTextEditor = false;
-              _showOpacityControl();
-              break;
-          }
-        });
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 16,
-            color: isSelected ? Theme.of(context).primaryColor : Colors.black87,
+    return GestureDetector(
+      onTap: () => _handleToolTap(label),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            getIconForLabel(),
+            color: isSelected
+                ? const Color(0xFF2196F3) // 选中时使用标准蓝色
+                : const Color(0xFF9E9E9E), // 未选中时使用中性灰色
+            size: 24,
           ),
-        ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: isSelected
+                  ? const Color(0xFF2196F3) // 选中时使用标准蓝色
+                  : const Color(0xFF9E9E9E), // 未选中时使用中性灰色
+              fontWeight: isSelected ? FontWeight.w500 : FontWeight.normal,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1398,5 +1406,45 @@ class _CreateScreenState extends State<CreateScreen>
         ),
       ),
     );
+  }
+
+  // 处理工具栏项点击事件
+  void _handleToolTap(String label) {
+    setState(() {
+      if (_selectedToolbarItem == label) {
+        // 如果点击已选中的项，则取消选中
+        _selectedToolbarItem = null;
+        _showTemplateSelector = false;
+        _showTextEditor = false;
+        return;
+      }
+
+      // 更新选中项
+      _selectedToolbarItem = label;
+
+      // 根据选中的工具执行相应操作
+      switch (label) {
+        case '文字':
+          _showTextEditor = true;
+          _showTemplateSelector = false;
+          break;
+        case '模板':
+          _showTemplateSelector = true;
+          _showTextEditor = false;
+          break;
+        case '颜色':
+          _showTemplateSelector = false;
+          _showTextEditor = false;
+          // 显示颜色选择器
+          _currentColorPage = 0; // 重置颜色页面
+          break;
+        case '显隐':
+          _showTemplateSelector = false;
+          _showTextEditor = false;
+          // 显示透明度控制
+          _showOpacityControl();
+          break;
+      }
+    });
   }
 }
