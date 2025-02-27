@@ -49,11 +49,18 @@ class ShellScreen extends StatelessWidget {
 
   int _calculateSelectedIndex(BuildContext context) {
     final String location = GoRouterState.of(context).uri.path;
-    if (location == '/') return 0;
-    if (location.startsWith('/templates')) return 1;
-    if (location.startsWith('/works')) return 3;
-    if (location.startsWith('/profile')) return 4;
-    return 0;
+    switch (location) {
+      case '/':
+        return 0;
+      case '/templates':
+        return 1;
+      case '/works':
+        return 2;
+      case '/profile':
+        return 3;
+      default:
+        return 0;
+    }
   }
 
   void _onItemTapped(int index, BuildContext context) {

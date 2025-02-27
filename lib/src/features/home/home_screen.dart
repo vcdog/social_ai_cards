@@ -59,120 +59,106 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadImages() async {
     try {
+      setState(() => _isLoading = true);
+      
+      // 加载推荐模板
       final templates = await _unsplashService.getImagesByCategory(
         '热门',
-        size: 'small', // 使用小尺寸图片
-        perPage: 6, // 限制加载数量
+        size: 'small',
+        perPage: 6,
       );
+      
+      // 加载创意灵感
       final inspirations = await _unsplashService.getImagesByCategory(
         '创意',
         size: 'small',
         perPage: 6,
       );
-
+      
+      if (!mounted) return;
+      
       setState(() {
-        _recommendedTemplates = templates
-            .map((url) => {
-                  'url': url,
-                  'name': TemplateNamingService.generateName('照片'),
-                })
-            .toList();
-        _inspirationImages = inspirations
-            .map((url) => {
-                  'url': url,
-                  'name': TemplateNamingService.generateName('创意'),
-                })
-            .toList();
+        _recommendedTemplates = templates.map((url) => {
+          'url': url,
+          'name': TemplateNamingService.generateName('照片'),
+        }).toList();
+        
+        _inspirationImages = inspirations.map((url) => {
+          'url': url,
+          'name': TemplateNamingService.generateName('创意'),
+        }).toList();
+        
         _isLoading = false;
       });
     } catch (e) {
-      print('Error loading images: $e');
-      setState(() => _isLoading = false);
+      debugPrint('Error loading images: $e');
+      
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _recommendedTemplates = [];
+        _inspirationImages = [];
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('HomeScreen build called, isLoading: $_isLoading');
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          children: [
-            Container(
-              width: 32,
-              height: 32,
-              margin: const EdgeInsets.only(right: 8),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(
-                Icons.auto_awesome,
-                color: Colors.white,
-                size: 20,
-              ),
-            ),
-            const Text('AI社交卡片'),
-          ],
+        title: const Text('AI社交卡片'),
+      ),
+      body: _isLoading 
+        ? const Center(child: CircularProgressIndicator())
+        : _buildContent(),
+    );
+  }
+
+  Widget _buildContent() {
+    return CustomScrollView(
+      slivers: [
+        // 快捷功能区域
+        SliverToBoxAdapter(
+          child: _buildShortcutsSection(),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {
-              // TODO: 实现搜索功能
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () {
-              // TODO: 跳转到设置页面
-            },
-          ),
-        ],
-      ),
-      body: CustomScrollView(
-        slivers: [
-          // 快捷功能区域
-          SliverToBoxAdapter(
-            child: _buildShortcutsSection(),
-          ),
 
-          // 推荐模板区域
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                children: [
-                  _buildSectionHeader(
-                    '推荐模板',
-                    '查看全部',
-                    onTap: () => context.push('/templates'),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildAdaptiveGrid(_recommendedTemplates),
-                ],
-              ),
+        // 推荐模板区域
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              children: [
+                _buildSectionHeader(
+                  '推荐模板',
+                  '查看全部',
+                  onTap: () => context.push('/templates'),
+                ),
+                const SizedBox(height: 16),
+                _buildAdaptiveGrid(_recommendedTemplates),
+              ],
             ),
           ),
+        ),
 
-          // 创意灵感区域
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                children: [
-                  _buildSectionHeader(
-                    '创意灵感',
-                    '更多灵感',
-                    onTap: () => context.push('/inspiration'),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildAdaptiveGrid(_inspirationImages),
-                ],
-              ),
+        // 创意灵感区域
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              children: [
+                _buildSectionHeader(
+                  '创意灵感',
+                  '更多灵感',
+                  onTap: () => context.push('/inspiration'),
+                ),
+                const SizedBox(height: 16),
+                _buildAdaptiveGrid(_inspirationImages),
+              ],
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

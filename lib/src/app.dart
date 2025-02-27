@@ -5,6 +5,14 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(); // 这个文件现在可以删除，因为我们已经在 main.dart 中配置了 MaterialApp
+    return MaterialApp.router(
+      builder: (context, child) {
+        if (child == null) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        return ErrorBoundary(child: child);
+      },
+      // ... 其他配置
+    );
   }
 }

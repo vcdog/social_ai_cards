@@ -74,26 +74,51 @@ class AppTheme {
 
     return ThemeData(
       useMaterial3: true,
+      brightness: Brightness.dark,
       colorScheme: ColorScheme.fromSeed(
         seedColor: primaryColor,
         brightness: Brightness.dark,
         primary: primaryColor,
         secondary: const Color(0xFFFF6B6B),
         tertiary: const Color(0xFF4CAF50),
-        surface: const Color(0xFF1E1E1E),
         background: const Color(0xFF121212),
+        surface: const Color(0xFF1E1E1E),
       ),
 
       // Card 样式
       cardTheme: CardTheme(
-        elevation: 0,
+        elevation: 2,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
         clipBehavior: Clip.antiAlias,
       ),
 
-      // 其他深色主题样式配置...
+      // 按钮样式
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
+
+      // 导航栏样式
+      navigationBarTheme: NavigationBarThemeData(
+        elevation: 0,
+        height: 65,
+        indicatorColor: primaryColor.withOpacity(0.12),
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+      ),
+
+      // AppBar 样式
+      appBarTheme: const AppBarTheme(
+        centerTitle: true,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        backgroundColor: Colors.transparent,
+      ),
     );
   }
 }

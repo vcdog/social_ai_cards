@@ -366,11 +366,11 @@ class _CreateScreenState extends State<CreateScreen>
                         label: Text(template['category']!),
                         selected: _selectedCategory == template['category'],
                         onSelected: (bool selected) {
-                          setState(() {
+              setState(() {
                             _selectedCategory = template['category']!;
                             _loadTemplateImages(_selectedCategory);
-                          });
-                        },
+              });
+            },
                       ),
                     ))
                 .toList(),
@@ -378,7 +378,7 @@ class _CreateScreenState extends State<CreateScreen>
         ),
         const SizedBox(height: 16),
         // 模板网格部分
-        Expanded(
+                Expanded(
           child: CustomScrollView(
             controller: _scrollController, // 添加滚动控制器
             slivers: [
@@ -406,23 +406,23 @@ class _CreateScreenState extends State<CreateScreen>
                       },
                       childCount:
                           _templateImages[_selectedCategory]?.length ?? 0,
-                    ),
-                  );
-                },
-              ),
+                                ),
+                              );
+                            },
+                          ),
               // 修改加载更多指示器的条件判断
               if (_isLoadingMore[_selectedCategory] ?? false)
                 const SliverToBoxAdapter(
                   child: Padding(
                     padding: EdgeInsets.all(8.0),
                     child: Center(
-                      child: CircularProgressIndicator(),
-                    ),
-                  ),
+                            child: CircularProgressIndicator(),
+                          ),
+                        ),
                 ),
-            ],
-          ),
-        ),
+                            ],
+                          ),
+                        ),
       ],
     );
   }
@@ -447,12 +447,12 @@ class _CreateScreenState extends State<CreateScreen>
           ),
 
           // 渐变遮罩
-          Positioned(
+                      Positioned(
             bottom: 0,
             left: 0,
             right: 0,
-            child: Container(
-              decoration: BoxDecoration(
+                        child: Container(
+                          decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
@@ -463,18 +463,18 @@ class _CreateScreenState extends State<CreateScreen>
                 ),
               ),
               padding: const EdgeInsets.all(8),
-              child: Text(
+                          child: Text(
                 imageData['name'] ?? '未命名模板',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
                   fontWeight: FontWeight.w500,
-                ),
+                            ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ),
+                          ),
+                        ),
+                      ),
 
           // 点击效果
           Material(
@@ -486,10 +486,10 @@ class _CreateScreenState extends State<CreateScreen>
                   _currentMode = 'edit';
                 });
               },
-            ),
+                        ),
+                      ),
+                    ],
           ),
-        ],
-      ),
     );
   }
 
@@ -533,15 +533,15 @@ class _CreateScreenState extends State<CreateScreen>
                       Opacity(
                         opacity: _templateOpacity,
                         child: ColorFiltered(
-                          colorFilter: ColorFilter.mode(
-                            Colors.white.withOpacity(0.7),
-                            BlendMode.lighten,
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: Image.network(
-                              _selectedBackgroundImage!,
-                              fit: BoxFit.cover,
+                        colorFilter: ColorFilter.mode(
+                          Colors.white.withOpacity(0.7),
+                          BlendMode.lighten,
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.network(
+                            _selectedBackgroundImage!,
+                            fit: BoxFit.cover,
                             ),
                           ),
                         ),
@@ -652,15 +652,15 @@ class _CreateScreenState extends State<CreateScreen>
                 Opacity(
                   opacity: _templateOpacity,
                   child: ColorFiltered(
-                    colorFilter: ColorFilter.mode(
-                      Colors.white.withOpacity(0.7),
-                      BlendMode.lighten,
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.network(
-                        _selectedBackgroundImage!,
-                        fit: BoxFit.cover,
+                  colorFilter: ColorFilter.mode(
+                    Colors.white.withOpacity(0.7),
+                    BlendMode.lighten,
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.network(
+                      _selectedBackgroundImage!,
+                      fit: BoxFit.cover,
                       ),
                     ),
                   ),
@@ -748,36 +748,36 @@ class _CreateScreenState extends State<CreateScreen>
                 children: [
                   // 向上箭头按钮和"样式调整"文字
                   GestureDetector(
-                    onTap: _toggleToolbar,
-                    child: Container(
+                onTap: _toggleToolbar,
+                child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(
-                        children: [
-                          Transform.rotate(
-                            angle: _arrowRotationAnimation.value,
-                            child: Icon(
-                              _isToolbarExpanded
-                                  ? Icons.keyboard_arrow_down
-                                  : Icons.keyboard_arrow_up,
-                              size: 24,
-                              color: Colors.black87,
-                            ),
-                          ),
+                  child: Row(
+                    children: [
+                      Transform.rotate(
+                        angle: _arrowRotationAnimation.value,
+                        child: Icon(
+                          _isToolbarExpanded 
+                              ? Icons.keyboard_arrow_down 
+                              : Icons.keyboard_arrow_up,
+                          size: 24,
+                          color: Colors.black87,
+                        ),
+                      ),
                           // 只在收起状态显示"样式调整"文字
                           if (!_isToolbarExpanded) ...[
                             const SizedBox(width: 8),
-                            const Text(
+                        const Text(
                               '样式调整',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.black87,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
+                ),
+              ),
                   // 工具栏选项
                   if (_isToolbarExpanded)
                     Expanded(
@@ -789,19 +789,19 @@ class _CreateScreenState extends State<CreateScreen>
                           _buildToolbarItem('颜色'),
                           _buildToolbarItem('显隐'),
                         ],
-                      ),
-                    ),
-                ],
-              ),
+                  ),
+                ),
+            ],
+          ),
               // 选中项的下划线指示器
               if (_selectedToolbarItem != null && _isToolbarExpanded)
                 Positioned(
                   left: _getIndicatorPosition(),
                   bottom: 0,
-                  child: Container(
+      child: Container(
                     width: 32,
                     height: 2,
-                    decoration: BoxDecoration(
+        decoration: BoxDecoration(
                       color: Theme.of(context).primaryColor,
                       borderRadius: BorderRadius.circular(1),
                     ),
@@ -849,7 +849,7 @@ class _CreateScreenState extends State<CreateScreen>
           return Icons.settings_rounded;
       }
     }
-
+    
     return GestureDetector(
       onTap: () => _handleToolTap(label),
       child: Column(
@@ -890,8 +890,8 @@ class _CreateScreenState extends State<CreateScreen>
     return SizedBox(
       height: 90,
       child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
+      mainAxisSize: MainAxisSize.min,
+      children: [
           // 第一行渐变色按钮
           Expanded(
             flex: 1,
@@ -899,11 +899,11 @@ class _CreateScreenState extends State<CreateScreen>
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: List.generate(8, (index) {
-                  final colorIndex = _currentColorPage * 16 + index;
-                  return _buildGradientColorButton(colorIndex);
-                }),
-              ),
+          children: List.generate(8, (index) {
+            final colorIndex = _currentColorPage * 16 + index;
+            return _buildGradientColorButton(colorIndex);
+          }),
+        ),
             ),
           ),
           // 第二行渐变色按钮
@@ -913,18 +913,18 @@ class _CreateScreenState extends State<CreateScreen>
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: List.generate(8, (index) {
-                  final colorIndex = _currentColorPage * 16 + index + 8;
-                  return _buildGradientColorButton(colorIndex);
-                }),
-              ),
+          children: List.generate(8, (index) {
+            final colorIndex = _currentColorPage * 16 + index + 8;
+            return _buildGradientColorButton(colorIndex);
+          }),
+        ),
             ),
           ),
-          // 页面指示器和切换按钮
+        // 页面指示器和切换按钮
           Padding(
             padding: const EdgeInsets.only(bottom: 4, top: 2),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 // 添加切换页面按钮
                 GestureDetector(
@@ -942,33 +942,33 @@ class _CreateScreenState extends State<CreateScreen>
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 16,
-                          height: 4,
-                          decoration: BoxDecoration(
+            children: [
+              Container(
+                width: 16,
+                height: 4,
+                decoration: BoxDecoration(
                             color: _currentColorPage == 0
                                 ? Theme.of(context).colorScheme.primary
                                 : Colors.grey.shade400,
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Container(
-                          width: 16,
-                          height: 4,
-                          decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 4),
+              Container(
+                width: 16,
+                height: 4,
+                decoration: BoxDecoration(
                             color: _currentColorPage == 1
                                 ? Theme.of(context).colorScheme.primary
                                 : Colors.grey.shade400,
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  borderRadius: BorderRadius.circular(2),
                 ),
-              ],
+              ),
+            ],
+                    ),
+          ),
+        ),
+      ],
             ),
           ),
         ],
