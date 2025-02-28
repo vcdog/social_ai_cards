@@ -5,6 +5,7 @@ import '../../services/unsplash_service.dart';
 import '../../services/template_naming_service.dart';
 import '../../models/template_model.dart';
 import '../../common/constants/assets.dart';
+import '../../features/template/template_detail_screen.dart';
 
 class TemplateScreen extends StatefulWidget {
   const TemplateScreen({Key? key}) : super(key: key);
@@ -210,80 +211,95 @@ class _TemplateScreenState extends State<TemplateScreen> {
   }
 
   Widget _buildTemplateCard(Map<String, String> imageData) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          // 图片
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Image.network(
-              imageData['url']!,
-              fit: BoxFit.cover,
-              width: double.infinity,
-              height: double.infinity,
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => TemplateDetailScreen(
+              templateData: imageData,
             ),
           ),
-          // 渐变遮罩
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: const BorderRadius.vertical(
-                  bottom: Radius.circular(12),
+        );
+      },
+      child: Hero(
+        tag: 'template_${imageData['url']}',
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.1),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Stack(
+            children: [
+              // 图片
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  imageData['url']!,
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  height: double.infinity,
                 ),
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    Colors.black.withOpacity(0.7),
+              ),
+              // 渐变遮罩
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: const BorderRadius.vertical(
+                      bottom: Radius.circular(12),
+                    ),
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withOpacity(0.7),
+                      ],
+                    ),
+                  ),
+                  padding: const EdgeInsets.all(8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        imageData['name'] ?? '未命名模板',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              // 操作按钮
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Row(
+                  children: [
+                    _buildActionButton(Icons.favorite_border),
+                    const SizedBox(width: 8),
+                    _buildActionButton(Icons.share),
                   ],
                 ),
               ),
-              padding: const EdgeInsets.all(8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    imageData['name'] ?? '未命名模板',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
+            ],
           ),
-          // 操作按钮
-          Positioned(
-            top: 8,
-            right: 8,
-            child: Row(
-              children: [
-                _buildActionButton(Icons.favorite_border),
-                const SizedBox(width: 8),
-                _buildActionButton(Icons.share),
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

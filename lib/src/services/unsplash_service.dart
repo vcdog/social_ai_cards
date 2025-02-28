@@ -60,4 +60,20 @@ class UnsplashService {
 
     return categoryMapping[category] ?? category;
   }
+
+  Future<String> getHdImageUrl(String originalUrl) async {
+    try {
+      // 从原始URL中提取图片ID
+      final uri = Uri.parse(originalUrl);
+      final pathSegments = uri.pathSegments;
+      final imageId = pathSegments.last;
+
+      // 构建高清图片URL
+      final hdUrl = originalUrl.replaceAll('&w=400', '&w=1080');
+      return hdUrl;
+    } catch (e) {
+      print('Error getting HD image URL: $e');
+      return originalUrl; // 如果转换失败，返回原始URL
+    }
+  }
 }
