@@ -213,8 +213,7 @@ class _TemplateScreenState extends State<TemplateScreen> {
   Widget _buildTemplateCard(Map<String, String> imageData) {
     return InkWell(
       onTap: () {
-        Navigator.push(
-          context,
+        Navigator.of(context, rootNavigator: true).push(
           MaterialPageRoute(
             builder: (context) => TemplateDetailScreen(
               templateData: imageData,

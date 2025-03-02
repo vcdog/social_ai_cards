@@ -9,6 +9,7 @@ import '../../features/works/works_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/welcome/welcome_screen.dart';
 import '../../features/settings/theme_mode_screen.dart';
+import '../../features/template/template_detail_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
@@ -39,7 +40,7 @@ CustomTransitionPage<T> _buildPageWithDefaultTransition<T>({
 
 final goRouter = GoRouter(
   navigatorKey: _rootNavigatorKey,
-  initialLocation: '/',
+  initialLocation: '/welcome',
   routes: [
     // 欢迎页面路由
     GoRoute(
@@ -83,6 +84,16 @@ final goRouter = GoRouter(
     GoRoute(
       path: '/settings/theme',
       builder: (context, state) => const ThemeModeScreen(),
+    ),
+
+    // 确保模板详情页面使用根导航器
+    GoRoute(
+      path: '/template-detail',
+      parentNavigatorKey: _rootNavigatorKey, // 关键设置：使用根导航器
+      builder: (context, state) {
+        final templateData = state.extra as Map<String, String>;
+        return TemplateDetailScreen(templateData: templateData);
+      },
     ),
   ],
 );

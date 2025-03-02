@@ -61,15 +61,15 @@ class UnsplashService {
     return categoryMapping[category] ?? category;
   }
 
-  Future<String> getHdImageUrl(String originalUrl) async {
+  Future<String> getHdImageUrl(String originalUrl, {int width = 1080}) async {
     try {
       // 从原始URL中提取图片ID
       final uri = Uri.parse(originalUrl);
       final pathSegments = uri.pathSegments;
       final imageId = pathSegments.last;
 
-      // 构建高清图片URL
-      final hdUrl = originalUrl.replaceAll('&w=400', '&w=1080');
+      // 构建高清图片URL，支持指定宽度
+      final hdUrl = originalUrl.replaceAll(RegExp(r'&w=\d+'), '&w=$width');
       return hdUrl;
     } catch (e) {
       print('Error getting HD image URL: $e');
